@@ -47,7 +47,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v230724";
+            Console.Title = "qBittorrentBlockXunlei v230726";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -215,10 +215,10 @@ namespace qBittorrentBlockXunlei
                                 */
                             }
 
-                            // 上傳了 1M 進度還是0
-                            if (!bBanPeer && (dmProgress == 0) && (ulUploaded >= 1024 * 1024) && (sFlags.IndexOf("U") != -1))
+                            // 上傳了 10M 進度還是0
+                            if (!bBanPeer && (dmProgress == 0) && (ulUploaded >= 10 * 1024 * 1024) && (sFlags.IndexOf("U") != -1))
                             {
-                                Console.WriteLine("Banned - Uploaded >= 1M & Progress = 0%: " + sClient + ", " + sPeer);
+                                Console.WriteLine("Banned - Uploaded >= 10M & Progress = 0%: " + sClient + ", " + sPeer);
                                 bBanPeer = true;
                             }
 
