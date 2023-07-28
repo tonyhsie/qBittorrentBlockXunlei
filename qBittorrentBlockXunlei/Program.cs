@@ -18,6 +18,7 @@ namespace qBittorrentBlockXunlei
         static readonly HttpClient client = new HttpClient();
 
         static readonly string sApp_webapiVersion = "/api/v2/app/webapiVersion";
+        static readonly string sApp_setPreferences = "/api/v2/app/setPreferences";
         static readonly string sSync_maindata = "/api/v2/sync/maindata";
         static readonly string sSync_torrentPeers = "/api/v2/sync/torrentPeers?hash=";
         static readonly string sTransfer_banpeers = "/api/v2/transfer/banPeers";
@@ -47,7 +48,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v230726";
+            Console.Title = "qBittorrentBlockXunlei v230728";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -77,7 +78,7 @@ namespace qBittorrentBlockXunlei
             }
             catch
             {
-                Console.WriteLine("Can't connent to qBittorrent WebUI");
+                Console.WriteLine("Can't connent to qBittorrent WebUI!");
                 Console.OutputEncoding = eOutput;
                 return;
             }
@@ -93,12 +94,24 @@ namespace qBittorrentBlockXunlei
                 }
             }
 
+            DateTime dtLastResetTime = DateTime.Now;
+            Console.WriteLine(dtLastResetTime + ", Reset banned_IPs!");
+            var response = await client.PostAsync(sBaseUrl + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+
             Dictionary<string, HashSet<string>> dBannedClients = new Dictionary<string, HashSet<string>>();
             Dictionary<string, HashSet<string>> dNotBannedClients = new Dictionary<string, HashSet<string>>();
 
             while (true)
             {
-                DateTime dtStart = DateTime.UtcNow;
+                DateTime dtStart = DateTime.Now;
+
+                TimeSpan ts = dtStart - dtLastResetTime;
+                if (ts.Days >= 1)
+                {
+                    dtLastResetTime = dtStart;
+                    Console.WriteLine(dtLastResetTime + ", Reset banned_IPs, reset interval: " + ts.TotalDays + " days");
+                    response = await client.PostAsync(sBaseUrl + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+                }
 
                 // 取得 torrent hash
                 responseBody = "";
@@ -282,7 +295,7 @@ namespace qBittorrentBlockXunlei
                     if (sbBanPeers[sbBanPeers.Length - 1] == '|')
                         sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
 
-                    var response = await client.PostAsync(sBaseUrl + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
+                    response = await client.PostAsync(sBaseUrl + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
                     sbBanPeers.Clear();
                 }
 
@@ -314,7 +327,8 @@ namespace qBittorrentBlockXunlei
                     }
                 }
 
-                Console.WriteLine(DateTime.Now + ", loop interval: " + iLoopInterval + " sec., loop cost: " + (DateTime.UtcNow - dtStart).TotalSeconds + " sec.");
+                DateTime dt = DateTime.Now;
+                Console.WriteLine(dt + ", loop interval: " + iLoopInterval + " sec., loop cost: " + (dt - dtStart).TotalSeconds + " sec.");
 
                 Thread.Sleep(iLoopInterval * 1000);
             }
