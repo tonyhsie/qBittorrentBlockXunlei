@@ -23,7 +23,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sSync_torrentPeers = "/api/v2/sync/torrentPeers?hash=";
         static readonly string sTransfer_banpeers = "/api/v2/transfer/banPeers";
 
-        static readonly string sMaindataStartText = "{\"categories\":{";
+        static readonly string sFullUpdateText = "\"full_update\":";
         static readonly string sTorrentsObjectText = "\"torrents\":{";
         static readonly string sUpspeedFieldText = "\"upspeed\":";
 
@@ -48,7 +48,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v230728";
+            Console.Title = "qBittorrentBlockXunlei v231103";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -129,7 +129,7 @@ namespace qBittorrentBlockXunlei
                 }
 
                 iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
-                if ((iResponseStartIndex == -1) || !responseBody.StartsWith(sMaindataStartText))
+                if ((iResponseStartIndex == -1) || !responseBody.Substring(0, iResponseStartIndex).Contains(sFullUpdateText))
                 {
                     Console.WriteLine("Can't get torrents info!");
                     break;
