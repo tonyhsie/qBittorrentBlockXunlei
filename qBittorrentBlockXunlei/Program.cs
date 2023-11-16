@@ -48,7 +48,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v231103";
+            Console.Title = "qBittorrentBlockXunlei v231116";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -72,15 +72,18 @@ namespace qBittorrentBlockXunlei
             StringBuilder sbBanPeers = new StringBuilder();
 
             // 取得 WebAPI 版本
-            try
+            responseBody = "";
+            while (responseBody == "")
             {
-                responseBody = await client.GetStringAsync(sBaseUrl + sApp_webapiVersion);
-            }
-            catch
-            {
-                Console.WriteLine("Can't connent to qBittorrent WebUI!");
-                Console.OutputEncoding = eOutput;
-                return;
+                try
+                {
+                    responseBody = await client.GetStringAsync(sBaseUrl + sApp_webapiVersion);
+                }
+                catch
+                {
+                    Console.WriteLine("Can't connent to qBittorrent WebUI, wait " + iLoopInterval + " sec. to reconnect!");
+                    Thread.Sleep(iLoopInterval * 1000);
+                }
             }
 
             // WebAPI 版本需 >= 2.3
