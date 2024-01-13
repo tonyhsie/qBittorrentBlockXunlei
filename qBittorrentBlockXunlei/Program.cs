@@ -37,7 +37,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sProgressFieldText = "\"progress\":";
         static readonly string sUploadedFieldText = "\"uploaded\":";
 
-        static readonly List<string> lsBannedClients = new List<string>() { "-XL", "Xunlei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla" };
+        static readonly List<string> lsBannedClients = new List<string>() { "-XL", "Xunlei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)" };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
         {
@@ -48,7 +48,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v231116";
+            Console.Title = "qBittorrentBlockXunlei v240114";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
