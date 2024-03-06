@@ -7,7 +7,7 @@
 
 目前規則是
 
-1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)
+1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)
 
 2. 該用戶進度為 0，已上傳給該用戶 10M 以上的量
 
