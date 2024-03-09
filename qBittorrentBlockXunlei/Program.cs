@@ -11,7 +11,7 @@ namespace qBittorrentBlockXunlei
     internal class Program
     {
         static readonly bool bCollectClients = false;
-        static readonly int iLoopInterval = 60;
+        static int iLoopInterval = 30;
 
         static readonly Encoding eOutput = Console.OutputEncoding;
 
@@ -48,13 +48,33 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240306";
+            Console.Title = "qBittorrentBlockXunlei v240310";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
 
+            // 讀取參數
+            if (args.Length > 1)
+            {
+                for (int i = 0; i <= args.Length - 2; ++i)
+                {
+                    if (args[i].Equals("/i", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-i", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (int.TryParse(args[i + 1], out int j))
+                        {
+                            Console.WriteLine("loop interval: " + iLoopInterval + " sec.");
+                            iLoopInterval = j;
+                        }
+                        else
+                        {
+                            Console.WriteLine("illegal loop interval: " + args[i + 1]);
+                        }
+                    }
+                }
+            }
+
             // 取得 port number
-            while ((args.Length == 0) || !int.TryParse(args[0], out int iPort) || (iPort < 0) || (iPort > 65535))
+            while ((args.Length == 0) || !int.TryParse(args[0], out int iPort) || (iPort <= 0) || (iPort > 65535))
             {
                 Console.Write("Port Number = ");
                 args = Console.ReadLine().Split(' ');
@@ -81,7 +101,7 @@ namespace qBittorrentBlockXunlei
                 }
                 catch
                 {
-                    Console.WriteLine("Can't connent to qBittorrent WebUI, wait " + iLoopInterval + " sec. to reconnect!");
+                    Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + iLoopInterval + " sec. to reconnect!");
                     Thread.Sleep(iLoopInterval * 1000);
                 }
             }
@@ -126,7 +146,7 @@ namespace qBittorrentBlockXunlei
                     }
                     catch
                     {
-                        Console.WriteLine("Can't connent to qBittorrent WebUI, wait " + iLoopInterval + " sec. to reconnect!");
+                        Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + iLoopInterval + " sec. to reconnect!");
                         Thread.Sleep(iLoopInterval * 1000);
                     }
                 }
