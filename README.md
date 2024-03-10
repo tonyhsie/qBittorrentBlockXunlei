@@ -34,7 +34,7 @@
 
 3. 若要停止執行，可直接關掉視窗，或按熱鍵 ctrl-c
 
-4. 可自行設定掃描的時間間隔，語法：qBittorrentBlockXunlei [埠號] [/t 間隔秒數]
+4. 可自行設定掃描的時間間隔，語法：qBittorrentBlockXunlei [埠號] [/i 間隔秒數]
 
 5. 如何確認此程式真的有作用？
 
