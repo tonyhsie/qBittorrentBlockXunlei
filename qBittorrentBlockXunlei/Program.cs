@@ -17,6 +17,7 @@ namespace qBittorrentBlockXunlei
 
         static readonly HttpClient client = new HttpClient();
 
+        static readonly string sAuth_login = "/api/v2/auth/login";
         static readonly string sApp_webapiVersion = "/api/v2/app/webapiVersion";
         static readonly string sApp_setPreferences = "/api/v2/app/setPreferences";
         static readonly string sSync_maindata = "/api/v2/sync/maindata";
@@ -41,49 +42,106 @@ namespace qBittorrentBlockXunlei
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
         {
-            Console.WriteLine(Environment.NewLine + "Ctrl-C is pressed!");
+            if ((sender != null) || (args != null))
+                Console.WriteLine(Environment.NewLine + "Ctrl-C is pressed!");
             Console.OutputEncoding = eOutput;
             Environment.Exit(0);
         }
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240312";
+            Console.Title = "qBittorrentBlockXunlei v240328";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
 
+            string sTargetServer = "http://localhost:";
+            string sTargetPort = "";
+            string sTargetUsername = "";
+            string sTargetPassword = "";
+
             // 讀取參數
-            if (args.Length > 1)
+            if (args.Length > 0)
             {
-                for (int i = 0; i <= args.Length - 2; ++i)
+                int iArgumentIndex = 0;
+                int iIndex = args[0].IndexOf(':');
+
+                if (iIndex != -1)
+                {
+                    sTargetPort = args[0].Substring(iIndex + 1);
+                    if ((args.Length >= 3) && int.TryParse(sTargetPort, out int j) && (j > 0) && (j <= 65535))
+                    {
+                        if (!args[0].StartsWith("http://"))
+                            sTargetServer = "http://" + args[0];
+                        else
+                            sTargetServer = args[0];
+                        sTargetUsername = args[1];
+                        sTargetPassword = args[2];
+
+                        iArgumentIndex += 3;
+                        Console.WriteLine("server address: " + sTargetServer);
+                    }
+                    else
+                    {
+                        Console.WriteLine("illegal server address: " + args[0]);
+                        CCEHandler(null, null);
+                    }
+                }
+                else if (int.TryParse(args[0], out int k) && (k > 0) && (k <= 65535))
+                {
+                    sTargetPort = args[0];
+                    sTargetServer += sTargetPort;
+
+                    iArgumentIndex += 1;
+                    Console.WriteLine("server address: " + sTargetServer);
+                }
+
+                for (int i = iArgumentIndex; i < args.Length; ++i)
                 {
                     if (args[i].Equals("/i", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-i", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (double.TryParse(args[i + 1], out double d) && (d >= 0))
+                        if (((i + 1) < args.Length) && double.TryParse(args[i + 1], out double d) && (d >= 0))
                         {
                             dLoopIntervalSeconds = d;
+
+                            i += 1;
                             Console.WriteLine("loop interval: " + dLoopIntervalSeconds + " sec.");
                         }
                         else
                         {
-                            Console.WriteLine("illegal loop interval: " + args[i + 1]);
+                            Console.WriteLine("illegal loop interval argument!");
                         }
                     }
                 }
             }
 
-            double dLoopIntervalMs = dLoopIntervalSeconds * 1000;
-            int iLoopIntervalMs = (int)Math.Round(dLoopIntervalMs);
-
             // 取得 port number
-            while ((args.Length == 0) || !int.TryParse(args[0], out int iPort) || (iPort <= 0) || (iPort > 65535))
+            while (sTargetPort == "")
             {
                 Console.Write("Port Number = ");
                 args = Console.ReadLine().Split(' ');
+                if ((args.Length > 0) && int.TryParse(args[0], out int i) && (i > 0) && (i <= 65535))
+                {
+                    sTargetPort = args[0];
+                    sTargetServer += sTargetPort;
+                }
             }
 
-            string sBaseUrl = "http://127.0.0.1:" + args[0];
+            Console.Title += "          " + sTargetServer;
+
+            try
+            {
+                (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
+            }
+            catch
+            {
+                Console.WriteLine("illegal server address!");
+                CCEHandler(null, null);
+            }
+
+            double dLoopIntervalMs = dLoopIntervalSeconds * 1000;
+            int iLoopIntervalMs = (int)Math.Round(dLoopIntervalMs);
+
             string responseBody;
             string peersBody;
 
@@ -100,7 +158,7 @@ namespace qBittorrentBlockXunlei
             {
                 try
                 {
-                    responseBody = await client.GetStringAsync(sBaseUrl + sApp_webapiVersion);
+                    responseBody = await client.GetStringAsync(sTargetServer + sApp_webapiVersion);
                 }
                 catch
                 {
@@ -122,7 +180,7 @@ namespace qBittorrentBlockXunlei
 
             DateTime dtLastResetTime = DateTime.Now;
             Console.WriteLine(dtLastResetTime + ", Reset banned_IPs!");
-            var response = await client.PostAsync(sBaseUrl + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+            var response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
 
             Dictionary<string, HashSet<string>> dBannedClients = new Dictionary<string, HashSet<string>>();
             Dictionary<string, HashSet<string>> dNotBannedClients = new Dictionary<string, HashSet<string>>();
@@ -136,7 +194,7 @@ namespace qBittorrentBlockXunlei
                 {
                     dtLastResetTime = dtStart;
                     Console.WriteLine(dtLastResetTime + ", Reset banned_IPs, reset interval: " + ts.TotalDays + " days");
-                    response = await client.PostAsync(sBaseUrl + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+                    response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
                 }
 
                 // 取得 torrent hash
@@ -145,7 +203,7 @@ namespace qBittorrentBlockXunlei
                 {
                     try
                     {
-                        responseBody = await client.GetStringAsync(sBaseUrl + sSync_maindata);
+                        responseBody = await client.GetStringAsync(sTargetServer + sSync_maindata);
                     }
                     catch
                     {
@@ -171,7 +229,7 @@ namespace qBittorrentBlockXunlei
 
                     // 取得 peers
                     {
-                        peersBody = await client.GetStringAsync(sBaseUrl + sSync_torrentPeers + sTorrentHash);
+                        peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
 
                         iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
                         if ((iPeersStartIndex == -1) || !peersBody.StartsWith(sTorrentPeersStartText))
@@ -321,7 +379,7 @@ namespace qBittorrentBlockXunlei
                     if (sbBanPeers[sbBanPeers.Length - 1] == '|')
                         sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
 
-                    response = await client.PostAsync(sBaseUrl + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
+                    response = await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
                     sbBanPeers.Clear();
                 }
 
