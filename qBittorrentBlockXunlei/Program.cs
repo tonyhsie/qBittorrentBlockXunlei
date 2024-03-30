@@ -50,7 +50,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240328";
+            Console.Title = "qBittorrentBlockXunlei v240330";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -59,6 +59,7 @@ namespace qBittorrentBlockXunlei
             string sTargetPort = "";
             string sTargetUsername = "";
             string sTargetPassword = "";
+            bool bRemoteServer = false;
 
             // 讀取參數
             if (args.Length > 0)
@@ -77,6 +78,7 @@ namespace qBittorrentBlockXunlei
                             sTargetServer = args[0];
                         sTargetUsername = args[1];
                         sTargetPassword = args[2];
+                        bRemoteServer = true;
 
                         iArgumentIndex += 3;
                         Console.WriteLine("server address: " + sTargetServer);
@@ -173,8 +175,7 @@ namespace qBittorrentBlockXunlei
                 if ((saVersion.Length < 2) || !int.TryParse(saVersion[0], out int iMajorVersion) || (iMajorVersion < 2) || !int.TryParse(saVersion[1], out int iMinorVersion) || ((iMajorVersion == 2) && (iMinorVersion < 3)))
                 {
                     Console.WriteLine("Please upgrade your qBittorrent first!");
-                    Console.OutputEncoding = eOutput;
-                    return;
+                    CCEHandler(null, null);
                 }
             }
 
@@ -203,6 +204,8 @@ namespace qBittorrentBlockXunlei
                 {
                     try
                     {
+                        if (bRemoteServer)
+                            (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
                         responseBody = await client.GetStringAsync(sTargetServer + sSync_maindata);
                     }
                     catch
