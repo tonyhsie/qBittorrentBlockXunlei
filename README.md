@@ -9,7 +9,7 @@
 
 1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown), Taipei-Torrent dev, trafficConsume, hp/torrent/*
 
-2. 上古用戶端: Azureus (最後一版: 2008/4)、Deluge (1.1.* 及以前版本: 2009/1)、qBittorrent (2.* 及以前版本: 2012/7)、TorrentStorm (最後一版: 2005/3)、Transmission (1.* 及以前版本: 2010/5)
+2. 上古用戶端: Azureus (3.* 及以前版本: 2008/7)、Deluge (1.1.* 及以前版本: 2009/1)、qBittorrent (2.* 及以前版本: 2012/7)、TorrentStorm (最後一版: 2005/3)、Transmission (1.* 及以前版本: 2010/5)
 
 3. 該用戶進度為 0，已上傳給該用戶 10M 以上的量
 
