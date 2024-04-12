@@ -61,7 +61,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240410";
+            Console.Title = "qBittorrentBlockXunlei v240412";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -346,7 +346,7 @@ namespace qBittorrentBlockXunlei
                                 {
                                     if (sClient.StartsWith(sLeechClient))
                                     {
-                                        Console.WriteLine("Banned - Leech Client:  " + sClient + ", " + sPeer);
+                                        Console.WriteLine("Banned - Leech Client:   " + sClient + ", " + sPeer);
                                         bBanPeer = true;
                                         break;
                                     }
@@ -358,7 +358,7 @@ namespace qBittorrentBlockXunlei
                                     {
                                         if (sClient.StartsWith(sAncientClient))
                                         {
-                                            Console.WriteLine("Banned - Ancient Client:" + sClient + ", " + sPeer);
+                                            Console.WriteLine("Banned - Ancient Client: " + sClient + ", " + sPeer);
                                             bBanPeer = true;
                                             break;
                                         }
@@ -375,7 +375,7 @@ namespace qBittorrentBlockXunlei
                                 */
                             }
 
-                            if (!bBanPeer && (sFlags.IndexOf('U') != -1))
+                            if (!bBanPeer && (sFlags.IndexOf('U') != -1) && (dTorrentSizes[sTorrentHash] > 0))
                             {
                                 // 上傳量 > 種子實際大小
                                 if (lUploaded > (dTorrentSizes[sTorrentHash] + 2 * dTorrentPieceSizes[sTorrentHash]))
@@ -399,6 +399,14 @@ namespace qBittorrentBlockXunlei
 
                             if (bBanPeer)
                                 sbBanPeers.Append(sPeer + "|");
+                        }
+
+                        // 某些情況下，有可能 "種子實際大小 = -1"，移除種子相關紀錄，待下一輪重新檢測
+                        if (dTorrentSizes[sTorrentHash] <= 0)
+                        {
+                            dPublicTorrents.Remove(sTorrentHash);
+                            dTorrentSizes.Remove(sTorrentHash);
+                            dTorrentPieceSizes.Remove(sTorrentHash);
                         }
                     }
 
