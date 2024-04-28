@@ -13,7 +13,7 @@ namespace qBittorrentBlockXunlei
 
         // 時間相關常數
         static readonly int iPauseBeforeExitMs = 2000;
-        static double dLoopIntervalSeconds = 30;
+        static double dLoopIntervalSeconds = 20;
 
         // 進度檢查單位 (bytes)
         static readonly long lProgressCheckBoundarySize = 50 * 1024 * 1024;
@@ -47,7 +47,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -61,7 +61,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240412";
+            Console.Title = "qBittorrentBlockXunlei v240428";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -432,7 +432,7 @@ namespace qBittorrentBlockXunlei
 
                 DateTime dtNow = DateTime.Now;
                 TimeSpan tsLoopCost = dtNow - dtStart;
-                Console.WriteLine(dtNow + ", torrent count(all/pt/bt): " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", loop interval: " + dLoopIntervalSeconds + " sec., loop cost: " + tsLoopCost.TotalSeconds + " sec.");
+                Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsLoopCost.TotalSeconds + " sec.");
 
                 int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsLoopCost.TotalMilliseconds);
                 if (iSleepMs > 0)
