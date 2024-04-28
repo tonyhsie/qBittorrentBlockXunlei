@@ -1,6 +1,6 @@
 一個幫 qBittorrent 阻擋迅雷 跟其它吸血 bt 客戶端的小工具
 
-此軟體會在固定時間間隔 (預設 30 秒，可自行透過參數設定) 裡，透過 qBittorrent 的 WebUI 來獲取所有 torrent 的所有客戶端資訊
+此軟體會在固定時間間隔 (預設 20 秒，可自行透過參數設定) 裡，透過 qBittorrent 的 WebUI 來獲取所有 torrent 的所有客戶端資訊
 
 然後按照預定規則，找出迅雷及其它吸血客戶端，回報它們的 IP 給 qBittorrent 去阻擋
 
