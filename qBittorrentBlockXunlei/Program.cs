@@ -47,7 +47,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.98" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -61,7 +61,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240428";
+            Console.Title = "qBittorrentBlockXunlei v240525";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -194,7 +194,7 @@ namespace qBittorrentBlockXunlei
             }
 
             DateTime dtLastResetTime = DateTime.Now;
-            Console.WriteLine(dtLastResetTime + ", Reset banned_IPs!");
+            Console.WriteLine(dtLastResetTime + ", Reset banned IPs!");
             var response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
 
             string[] saStatusToken = new string[] { ",\"status\":" };
@@ -204,239 +204,248 @@ namespace qBittorrentBlockXunlei
 
             while (true)
             {
-                DateTime dtStart = DateTime.Now;
-
-                TimeSpan ts = dtStart - dtLastResetTime;
-                if (ts.Days >= 1)
+                try
                 {
-                    dtLastResetTime = dtStart;
-                    Console.WriteLine(dtLastResetTime + ", Reset banned_IPs, reset interval: " + ts.TotalDays + " days");
-                    response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
-                }
+                    DateTime dtStart = DateTime.Now;
 
-                int iTorrentCount = 0;
-                int iPublicTorrentCount = 0;
-
-                // 取得 torrent hash
-                responseBody = "";
-                while (responseBody == "")
-                {
-                    try
+                    TimeSpan ts = dtStart - dtLastResetTime;
+                    if (ts.Days >= 1)
                     {
-                        if (bRemoteServer)
-                            (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
-                        responseBody = await client.GetStringAsync(sTargetServer + sSync_maindata);
+                        dtLastResetTime = dtStart;
+                        Console.WriteLine(dtLastResetTime + ", Reset banned IPs, reset interval: " + ts.TotalDays + " days");
+                        response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
                     }
-                    catch
+
+                    int iTorrentCount = 0;
+                    int iPublicTorrentCount = 0;
+
+                    // 取得 torrent hash
+                    responseBody = "";
+                    while (responseBody == "")
                     {
-                        Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
-                        Thread.Sleep(iLoopIntervalMs);
-                    }
-                }
-
-                iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
-                if ((iResponseStartIndex == -1) || !responseBody.Substring(0, iResponseStartIndex).Contains(sFullUpdateText))
-                {
-                    Console.WriteLine("Can't get torrents info!");
-                    CCEHandler(null, null);
-                }
-
-                iResponseStartIndex += sTorrentsObjectText.Length;
-
-                while (iResponseStartIndex != -1)
-                {
-                    ++iResponseStartIndex;
-                    iResponseEndIndex = responseBody.IndexOf('"', iResponseStartIndex);
-                    string sTorrentHash = responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex);
-                    ++iTorrentCount;
-
-                    if (!dPublicTorrents.ContainsKey(sTorrentHash))
-                    {
-                        string trackersBody = await client.GetStringAsync(sTargetServer + sTorrentsTrackers + sTorrentHash);
-                        string[] sa = trackersBody.Split(saStatusToken, StringSplitOptions.None);
-
-                        // Private Tracker: DHT is disabled & only one Tracker
-                        if ((sa.Length == 5) && (sa[1][0] == '0'))
+                        try
                         {
-                            dPublicTorrents[sTorrentHash] = false;
+                            if (bRemoteServer)
+                                (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
+                            responseBody = await client.GetStringAsync(sTargetServer + sSync_maindata);
                         }
-                        else
+                        catch
                         {
-                            dPublicTorrents[sTorrentHash] = true;
-
-                            iResponseStartIndex = responseBody.IndexOf(sTotalSizeFieldText, iResponseEndIndex) + sTotalSizeFieldText.Length;
-                            iResponseEndIndex = responseBody.IndexOf(',', iResponseStartIndex);
-                            dTorrentSizes[sTorrentHash] = long.Parse(responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex));
-
-                            string propertiesBody = await client.GetStringAsync(sTargetServer + sTorrentsProperties + sTorrentHash);
-                            int iStartIndex = propertiesBody.IndexOf(sPieceSizeFieldText) + sPieceSizeFieldText.Length;
-                            dTorrentPieceSizes[sTorrentHash] = long.Parse(propertiesBody.Substring(iStartIndex, propertiesBody.IndexOf(',', iStartIndex) - iStartIndex));
+                            Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
+                            Thread.Sleep(iLoopIntervalMs);
                         }
                     }
 
-                    // 取得 peers (僅限於非 PT 的種子)
-                    if (dPublicTorrents[sTorrentHash])
+                    iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
+                    if ((iResponseStartIndex == -1) || !responseBody.Substring(0, iResponseStartIndex).Contains(sFullUpdateText))
                     {
-                        ++iPublicTorrentCount;
+                        Console.WriteLine("Can't get torrents info!");
+                        throw new Exception("Can't get torrents info!");
+                    }
 
-                        peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
+                    iResponseStartIndex += sTorrentsObjectText.Length;
 
-                        iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
-                        if ((iPeersStartIndex == -1) || !peersBody.StartsWith(sTorrentPeersStartText))
+                    while (iResponseStartIndex != -1)
+                    {
+                        ++iResponseStartIndex;
+                        iResponseEndIndex = responseBody.IndexOf('"', iResponseStartIndex);
+                        string sTorrentHash = responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex);
+                        ++iTorrentCount;
+
+                        if (!dPublicTorrents.ContainsKey(sTorrentHash))
                         {
-                            Console.WriteLine("Can't get peers list!");
-                            break;
-                        }
+                            string trackersBody = await client.GetStringAsync(sTargetServer + sTorrentsTrackers + sTorrentHash);
+                            string[] sa = trackersBody.Split(saStatusToken, StringSplitOptions.None);
 
-                        iPeersStartIndex += sPeersObjectText.Length;
-
-                        while (iPeersStartIndex != -1)
-                        {
-                            ++iPeersStartIndex;
-                            iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
-
-                            // 無 peer
-                            if (iPeersEndIndex - iPeersStartIndex == 1)
-                                break;
-
-                            string sPeer = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
-
-                            iPeersStartIndex = peersBody.IndexOf(sClientFieldText, iPeersEndIndex) + sClientFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
-                            string sClient = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
-
-                            iPeersStartIndex = peersBody.IndexOf(sCountryCodeFieldText, iPeersEndIndex) + sCountryCodeFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
-                            string sCountryCode = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
-
-                            iPeersStartIndex = peersBody.IndexOf(sDownloadedFieldText, iPeersEndIndex) + sDownloadedFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf(',', iPeersStartIndex);
-                            long lDownloaded = long.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
-
-                            iPeersStartIndex = peersBody.IndexOf(sFlagsFieldText, iPeersEndIndex) + sFlagsFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
-                            string sFlags = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
-
-                            iPeersStartIndex = peersBody.IndexOf(sPortFieldText, iPeersEndIndex) + sPortFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf(",", iPeersStartIndex);
-                            int iPort = int.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
-
-                            iPeersStartIndex = peersBody.IndexOf(sProgressFieldText, iPeersEndIndex) + sProgressFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf(",", iPeersStartIndex);
-                            decimal dmProgress = decimal.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex), System.Globalization.NumberStyles.AllowDecimalPoint | System.Globalization.NumberStyles.AllowExponent);
-
-                            iPeersStartIndex = peersBody.IndexOf(sUploadedFieldText, iPeersEndIndex) + sUploadedFieldText.Length;
-                            iPeersEndIndex = peersBody.IndexOf('}', iPeersStartIndex);
-                            long lUploaded = long.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
-
-                            // 找下一個 peer：先找每個 peer 最後一欄 uploaded，再看結尾字串是 "}," 或 "}}"
-                            iPeersStartIndex = iPeersEndIndex + 1;
-                            if (peersBody[iPeersStartIndex] == ',')
-                                ++iPeersStartIndex;
-                            else
-                                iPeersStartIndex = -1;
-
-                            // 判斷是否要 ban 該 peer
-                            bool bBanPeer = false;
-
-                            // 對方回報的進度是 0 或 對方未曾上傳過
-                            if ((dmProgress == 0) || (lDownloaded == 0))
+                            // Private Tracker: DHT is disabled & Trackers <= 3
+                            if ((sa[1][0] == '0') && (sa.Length >= 5) && (sa.Length <= 7))
                             {
-                                foreach (string sLeechClient in lsLeechClients)
-                                {
-                                    if (sClient.StartsWith(sLeechClient))
-                                    {
-                                        Console.WriteLine("Banned - Leech Client:   " + sClient + ", " + sPeer);
-                                        bBanPeer = true;
-                                        break;
-                                    }
-                                }
+                                dPublicTorrents[sTorrentHash] = false;
+                            }
+                            else
+                            {
+                                dPublicTorrents[sTorrentHash] = true;
 
-                                if (!bBanPeer && bBanAncientClients)
+                                iResponseStartIndex = responseBody.IndexOf(sTotalSizeFieldText, iResponseEndIndex) + sTotalSizeFieldText.Length;
+                                iResponseEndIndex = responseBody.IndexOf(',', iResponseStartIndex);
+                                dTorrentSizes[sTorrentHash] = long.Parse(responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex));
+
+                                string propertiesBody = await client.GetStringAsync(sTargetServer + sTorrentsProperties + sTorrentHash);
+                                int iStartIndex = propertiesBody.IndexOf(sPieceSizeFieldText) + sPieceSizeFieldText.Length;
+                                dTorrentPieceSizes[sTorrentHash] = long.Parse(propertiesBody.Substring(iStartIndex, propertiesBody.IndexOf(',', iStartIndex) - iStartIndex));
+                            }
+                        }
+
+                        // 取得 peers (僅限於非 PT 的種子)
+                        if (dPublicTorrents[sTorrentHash])
+                        {
+                            ++iPublicTorrentCount;
+
+                            peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
+
+                            iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
+                            if ((iPeersStartIndex == -1) || !peersBody.StartsWith(sTorrentPeersStartText))
+                            {
+                                Console.WriteLine("Can't get peers list!");
+                                break;
+                            }
+
+                            iPeersStartIndex += sPeersObjectText.Length;
+
+                            while (iPeersStartIndex != -1)
+                            {
+                                ++iPeersStartIndex;
+                                iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
+
+                                // 無 peer
+                                if (iPeersEndIndex - iPeersStartIndex == 1)
+                                    break;
+
+                                string sPeer = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
+
+                                iPeersStartIndex = peersBody.IndexOf(sClientFieldText, iPeersEndIndex) + sClientFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
+                                string sClient = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
+
+                                iPeersStartIndex = peersBody.IndexOf(sCountryCodeFieldText, iPeersEndIndex) + sCountryCodeFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
+                                string sCountryCode = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
+
+                                iPeersStartIndex = peersBody.IndexOf(sDownloadedFieldText, iPeersEndIndex) + sDownloadedFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf(',', iPeersStartIndex);
+                                long lDownloaded = long.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
+
+                                iPeersStartIndex = peersBody.IndexOf(sFlagsFieldText, iPeersEndIndex) + sFlagsFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf('"', iPeersStartIndex);
+                                string sFlags = peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex);
+
+                                iPeersStartIndex = peersBody.IndexOf(sPortFieldText, iPeersEndIndex) + sPortFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf(",", iPeersStartIndex);
+                                int iPort = int.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
+
+                                iPeersStartIndex = peersBody.IndexOf(sProgressFieldText, iPeersEndIndex) + sProgressFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf(",", iPeersStartIndex);
+                                decimal dmProgress = decimal.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex), System.Globalization.NumberStyles.AllowDecimalPoint | System.Globalization.NumberStyles.AllowExponent);
+
+                                iPeersStartIndex = peersBody.IndexOf(sUploadedFieldText, iPeersEndIndex) + sUploadedFieldText.Length;
+                                iPeersEndIndex = peersBody.IndexOf('}', iPeersStartIndex);
+                                long lUploaded = long.Parse(peersBody.Substring(iPeersStartIndex, iPeersEndIndex - iPeersStartIndex));
+
+                                // 找下一個 peer：先找每個 peer 最後一欄 uploaded，再看結尾字串是 "}," 或 "}}"
+                                iPeersStartIndex = iPeersEndIndex + 1;
+                                if (peersBody[iPeersStartIndex] == ',')
+                                    ++iPeersStartIndex;
+                                else
+                                    iPeersStartIndex = -1;
+
+                                // 判斷是否要 ban 該 peer
+                                bool bBanPeer = false;
+
+                                // 對方回報的進度是 0 或 對方未曾上傳過
+                                if ((dmProgress == 0) || (lDownloaded == 0))
                                 {
-                                    foreach (string sAncientClient in lsAncientClients)
+                                    foreach (string sLeechClient in lsLeechClients)
                                     {
-                                        if (sClient.StartsWith(sAncientClient))
+                                        if (sClient.StartsWith(sLeechClient))
                                         {
-                                            Console.WriteLine("Banned - Ancient Client: " + sClient + ", " + sPeer);
+                                            Console.WriteLine("Banned - Leech Client:   " + sClient + ", " + sPeer);
                                             bBanPeer = true;
                                             break;
                                         }
                                     }
+
+                                    if (!bBanPeer && bBanAncientClients)
+                                    {
+                                        foreach (string sAncientClient in lsAncientClients)
+                                        {
+                                            if (sClient.StartsWith(sAncientClient))
+                                            {
+                                                Console.WriteLine("Banned - Ancient Client: " + sClient + ", " + sPeer);
+                                                bBanPeer = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    /*
+                                    // 可疑的 port
+                                    if ((iPort == 12345) || (iPort == 2011) || (iPort == 2013) || (iPort == 54321) || (iPort == 15000) || (iPort < 2100))
+                                    {
+                                        Console.WriteLine("Banned by Port: " + iPort + ", " + sPeer);
+                                        sbBanPeers.Append(sPeer + "|");
+                                    }
+                                    */
                                 }
 
-                                /*
-                                // 可疑的 port
-                                if ((iPort == 12345) || (iPort == 2011) || (iPort == 2013) || (iPort == 54321) || (iPort == 15000) || (iPort < 2100))
+                                if (!bBanPeer && (sFlags.IndexOf('U') != -1) && (dTorrentSizes[sTorrentHash] > 0))
                                 {
-                                    Console.WriteLine("Banned by Port: " + iPort + ", " + sPeer);
+                                    // 上傳量 > 種子實際大小
+                                    if (lUploaded > (dTorrentSizes[sTorrentHash] + 2 * dTorrentPieceSizes[sTorrentHash]))
+                                    {
+                                        Console.WriteLine("Banned - Uploaded " + ((decimal)lUploaded / 1024 / 1024) + " MB > Torrent size " + ((decimal)dTorrentSizes[sTorrentHash] / 1024 / 1024) + " MB: " + sClient + ", " + sPeer);
+                                        bBanPeer = true;
+                                    }
+                                    // 上傳了 10 MB 後，對方回報的進度仍為 0
+                                    else if ((dmProgress == 0) && (lUploaded > 10 * 1024 * 1024) && (lUploaded > (2 * dTorrentPieceSizes[sTorrentHash])))
+                                    {
+                                        Console.WriteLine("Banned - Uploaded > 10 MB & Progress = 0%: " + sClient + ", " + sPeer);
+                                        bBanPeer = true;
+                                    }
+                                    // 預估進度 > 對方回報的進度，預估進度 = (上傳量 - 容許誤差) / 種子實際大小
+                                    else if ((dTorrentSizes[sTorrentHash] > lProgressCheckBoundarySize) && ((lUploaded - lProgressCheckBoundarySize) > (dTorrentSizes[sTorrentHash] * dmProgress)))
+                                    {
+                                        Console.WriteLine("Banned - Uploaded = " + ((decimal)lUploaded * 100 / dTorrentSizes[sTorrentHash]) + "% > Progress = " + (dmProgress * 100) + "%: " + sClient + ", " + sPeer);
+                                        bBanPeer = true;
+                                    }
+                                }
+
+                                if (bBanPeer)
                                     sbBanPeers.Append(sPeer + "|");
-                                }
-                                */
                             }
 
-                            if (!bBanPeer && (sFlags.IndexOf('U') != -1) && (dTorrentSizes[sTorrentHash] > 0))
+                            // 某些情況下，有可能 "種子實際大小 = -1"，移除種子相關紀錄，待下一輪重新檢測
+                            if (dTorrentSizes[sTorrentHash] <= 0)
                             {
-                                // 上傳量 > 種子實際大小
-                                if (lUploaded > (dTorrentSizes[sTorrentHash] + 2 * dTorrentPieceSizes[sTorrentHash]))
-                                {
-                                    Console.WriteLine("Banned - Uploaded " + ((decimal)lUploaded / 1024 / 1024) + " MB > Torrent size " + ((decimal)dTorrentSizes[sTorrentHash] / 1024 / 1024) + " MB: " + sClient + ", " + sPeer);
-                                    bBanPeer = true;
-                                }
-                                // 上傳了 10 MB 後，對方回報的進度仍為 0
-                                else if ((dmProgress == 0) && (lUploaded > 10 * 1024 * 1024) && (lUploaded > (2 * dTorrentPieceSizes[sTorrentHash])))
-                                {
-                                    Console.WriteLine("Banned - Uploaded > 10 MB & Progress = 0%: " + sClient + ", " + sPeer);
-                                    bBanPeer = true;
-                                }
-                                // 預估進度 > 對方回報的進度，預估進度 = (上傳量 - 容許誤差) / 種子實際大小
-                                else if ((dTorrentSizes[sTorrentHash] > lProgressCheckBoundarySize) && ((lUploaded - lProgressCheckBoundarySize) > (dTorrentSizes[sTorrentHash] * dmProgress)))
-                                {
-                                    Console.WriteLine("Banned - Uploaded = " + ((decimal)lUploaded * 100 / dTorrentSizes[sTorrentHash]) + "% > Progress = " + (dmProgress * 100) + "%: " + sClient + ", " + sPeer);
-                                    bBanPeer = true;
-                                }
+                                dPublicTorrents.Remove(sTorrentHash);
+                                dTorrentSizes.Remove(sTorrentHash);
+                                dTorrentPieceSizes.Remove(sTorrentHash);
                             }
-
-                            if (bBanPeer)
-                                sbBanPeers.Append(sPeer + "|");
                         }
 
-                        // 某些情況下，有可能 "種子實際大小 = -1"，移除種子相關紀錄，待下一輪重新檢測
-                        if (dTorrentSizes[sTorrentHash] <= 0)
+                        // 找下一個 torrent hash：先找每個 torrent 最後一欄 upspeed，再看結尾字串是 "}," 或 "}}"
+                        iResponseStartIndex = responseBody.IndexOf(sUpspeedFieldText, iResponseEndIndex);
+                        if (iResponseStartIndex != -1)
                         {
-                            dPublicTorrents.Remove(sTorrentHash);
-                            dTorrentSizes.Remove(sTorrentHash);
-                            dTorrentPieceSizes.Remove(sTorrentHash);
+                            iResponseStartIndex = responseBody.IndexOf('}', iResponseStartIndex) + 1;
+                            if (responseBody[iResponseStartIndex] == ',')
+                                ++iResponseStartIndex;
+                            else
+                                iResponseStartIndex = -1;
                         }
                     }
 
-                    // 找下一個 torrent hash：先找每個 torrent 最後一欄 upspeed，再看結尾字串是 "}," 或 "}}"
-                    iResponseStartIndex = responseBody.IndexOf(sUpspeedFieldText, iResponseEndIndex);
-                    if (iResponseStartIndex != -1)
+                    if (sbBanPeers.Length > 0)
                     {
-                        iResponseStartIndex = responseBody.IndexOf('}', iResponseStartIndex) + 1;
-                        if (responseBody[iResponseStartIndex] == ',')
-                            ++iResponseStartIndex;
-                        else
-                            iResponseStartIndex = -1;
+                        sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
+
+                        response = await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
+                        sbBanPeers.Clear();
                     }
-                }
 
-                if (sbBanPeers.Length > 0)
+                    DateTime dtNow = DateTime.Now;
+                    TimeSpan tsLoopCost = dtNow - dtStart;
+                    Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsLoopCost.TotalSeconds + " sec.");
+
+                    int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsLoopCost.TotalMilliseconds);
+                    if (iSleepMs > 0)
+                        Thread.Sleep(iSleepMs);
+
+                }
+                catch (Exception ex)
                 {
-                    sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
-
-                    response = await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
-                    sbBanPeers.Clear();
+                    Console.WriteLine(ex.Message + "\t" + DateTime.Now.ToString());
+                    Thread.Sleep(iPauseBeforeExitMs);
                 }
-
-                DateTime dtNow = DateTime.Now;
-                TimeSpan tsLoopCost = dtNow - dtStart;
-                Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsLoopCost.TotalSeconds + " sec.");
-
-                int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsLoopCost.TotalMilliseconds);
-                if (iSleepMs > 0)
-                    Thread.Sleep(iSleepMs);
             }
         }
     }
