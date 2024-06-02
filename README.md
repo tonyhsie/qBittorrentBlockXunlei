@@ -1,13 +1,13 @@
 一個幫 qBittorrent 阻擋迅雷 跟其它吸血 bt 客戶端的小工具
 
-此軟體會在固定時間間隔 (預設 20 秒，可自行透過參數設定) 裡，透過 qBittorrent 的 WebUI 來獲取所有 torrent 的所有客戶端資訊
+此軟體會在固定時間間隔 (預設 10 秒，可自行透過參數設定) 裡，透過 qBittorrent 的 WebUI 來獲取所有 torrent 的所有客戶端資訊
 
 然後按照預定規則，找出迅雷及其它吸血客戶端，回報它們的 IP 給 qBittorrent 去阻擋
 
 
 目前規則是
 
-1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown), Taipei-Torrent dev, trafficConsume, hp/torrent/*, BitComet 1.98
+1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown), Taipei-Torrent dev, trafficConsume, hp/torrent/*, BitComet 1.92 & 1.98
 
 2. 上古用戶端: Azureus (3.* 及以前版本: 2008/7)、Deluge (1.1.* 及以前版本: 2009/1)、qBittorrent (2.* 及以前版本: 2012/7)、TorrentStorm (最後一版: 2005/3)、Transmission (1.* 及以前版本: 2010/5)
 
