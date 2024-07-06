@@ -47,7 +47,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -61,7 +61,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240602";
+            Console.Title = "qBittorrentBlockXunlei v240706";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -351,7 +351,7 @@ namespace qBittorrentBlockXunlei
                                 bool bBanPeer = false;
 
                                 // 對方回報的進度是 0 或 對方未曾上傳過
-                                if ((dmProgress == 0) || (lDownloaded == 0))
+                                if ((dmProgress == 0) || ((lDownloaded == 0) && (dmProgress != 1)))
                                 {
                                     foreach (string sLeechClient in lsLeechClients)
                                     {
@@ -411,7 +411,7 @@ namespace qBittorrentBlockXunlei
                                     // 現在進度 < 最初進度
                                     else if (dmProgress < dPeerProgresses[sPeer])
                                     {
-                                        Console.WriteLine("Banned - Current progress = " + (dmProgress * 100).ToString(sDecimalFormat) + "% < initial = " + (dPeerProgresses[sPeer] * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
+                                        Console.WriteLine("Banned - Progress = " + (dmProgress * 100).ToString(sDecimalFormat) + "% < initial = " + (dPeerProgresses[sPeer] * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
                                         bBanPeer = true;
                                     }
                                     // 預估進度 > 對方回報的進度，預估進度 = (上傳量 - 容許誤差) / 種子實際大小
