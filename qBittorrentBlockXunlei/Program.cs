@@ -16,7 +16,7 @@ namespace qBittorrentBlockXunlei
         static double dLoopIntervalSeconds = 10;
 
         // 進度檢查單位 (bytes)
-        static readonly long lProgressCheckBoundarySize = 50 * 1024 * 1024;
+        static readonly long lProgressCheckBoundarySize = 30 * 1024 * 1024;
 
         static readonly Encoding eOutput = Console.OutputEncoding;
 
@@ -47,7 +47,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "Unknown", "GT" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -61,7 +61,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240706";
+            Console.Title = "qBittorrentBlockXunlei v240820";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -290,6 +290,9 @@ namespace qBittorrentBlockXunlei
                                 dTorrentPeerProgresses[sTorrentHash] = new Dictionary<string, decimal>();
                             Dictionary<string, decimal> dPeerProgresses = dTorrentPeerProgresses[sTorrentHash];
 
+                            Dictionary<string, HashSet<string>> dPeerNetworks = new Dictionary<string, HashSet<string>>();
+                            Dictionary<string, string> dPeerToClients = new Dictionary<string, string>();
+
                             peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
 
                             iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
@@ -349,6 +352,24 @@ namespace qBittorrentBlockXunlei
 
                                 // 判斷是否要 ban 該 peer
                                 bool bBanPeer = false;
+
+                                // 判斷 peer 所屬的 network
+                                {
+                                    char cIpGroupSeparator = '.';
+                                    string sNetwork = sPeer;
+                                    if (sPeer.StartsWith("[::ffff:"))
+                                        sNetwork = sNetwork.Substring("[::ffff:".Length);
+                                    else if (sPeer[0] == '[')
+                                        cIpGroupSeparator = ':';
+                                    int Iindex = 0;
+                                    for (int i = 0; i < 3; ++i)
+                                        Iindex = sNetwork.IndexOf(cIpGroupSeparator, Iindex) + 1;
+                                    sNetwork = sNetwork.Substring(0, Iindex);
+                                    if (!dPeerNetworks.ContainsKey(sNetwork))
+                                        dPeerNetworks[sNetwork] = new HashSet<string>();
+                                    dPeerNetworks[sNetwork].Add(sPeer);
+                                    dPeerToClients[sPeer] = sClient;
+                                }
 
                                 // 對方回報的進度是 0 或 對方未曾上傳過
                                 if ((dmProgress == 0) || ((lDownloaded == 0) && (dmProgress != 1)))
@@ -425,6 +446,21 @@ namespace qBittorrentBlockXunlei
                                 if (bBanPeer)
                                     sbBanPeers.Append(sPeer + "|");
                             }
+
+                            foreach (string sNetwork in new List<string>(dPeerNetworks.Keys))
+                            {
+                                // 同一 network 下有 >= 5 個不同 IP 連線
+                                if (dPeerNetworks[sNetwork].Count >= 5)
+                                {
+                                    foreach (string sPeer in dPeerNetworks[sNetwork])
+                                    {
+                                        Console.WriteLine("Banned - Same Network Clients: " + dPeerToClients[sPeer] + ", " + sPeer);
+                                        sbBanPeers.Append(sPeer + "|");
+                                    }
+                                }
+                                dPeerNetworks[sNetwork].Clear();
+                            }
+                            dPeerNetworks.Clear();
 
                             // 某些情況下，有可能 "種子實際大小 = -1"，移除種子相關紀錄，待下一輪重新檢測
                             if (dTorrentSizes[sTorrentHash] <= 0)
