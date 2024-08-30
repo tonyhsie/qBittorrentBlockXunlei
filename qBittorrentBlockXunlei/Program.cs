@@ -9,8 +9,6 @@ namespace qBittorrentBlockXunlei
 {
     internal class Program
     {
-        static bool bBanAncientClients = true;
-
         // 時間相關常數
         static readonly int iPauseBeforeExitMs = 2000;
         static double dLoopIntervalSeconds = 10;
@@ -47,8 +45,8 @@ namespace qBittorrentBlockXunlei
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "Unknown", "GT" };
-        static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1." };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "Unknown", "GT", "StellarPlayer", "Gopeed dev", "BM", "DT", "HP", "MediaGet", "MS", "WW" };
+        static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
         {
@@ -61,7 +59,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240820";
+            Console.Title = "qBittorrentBlockXunlei v240830";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -210,12 +208,12 @@ namespace qBittorrentBlockXunlei
             {
                 try
                 {
-                    DateTime dtStart = DateTime.Now;
+                    DateTime dtResetBase = DateTime.Now;
 
-                    TimeSpan ts = dtStart - dtLastResetTime;
+                    TimeSpan ts = dtResetBase - dtLastResetTime;
                     if (ts.Days >= 1)
                     {
-                        dtLastResetTime = dtStart;
+                        dtLastResetTime = dtResetBase;
                         Console.WriteLine(dtLastResetTime + ", Reset banned IPs, reset interval: " + ts.TotalDays + " days");
                         response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
                     }
@@ -374,25 +372,36 @@ namespace qBittorrentBlockXunlei
                                 // 對方回報的進度是 0 或 對方未曾上傳過
                                 if ((dmProgress == 0) || ((lDownloaded == 0) && (dmProgress != 1)))
                                 {
-                                    foreach (string sLeechClient in lsLeechClients)
+                                    if (sClient != "")
                                     {
-                                        if (sClient.StartsWith(sLeechClient))
+                                        if (sClient.Length < 4)
                                         {
-                                            Console.WriteLine("Banned - Leech Client:   " + sClient + ", " + sPeer);
+                                            Console.WriteLine("Banned - ??? Client:     " + sClient + ", " + sPeer);
                                             bBanPeer = true;
-                                            break;
                                         }
-                                    }
-
-                                    if (!bBanPeer && bBanAncientClients)
-                                    {
-                                        foreach (string sAncientClient in lsAncientClients)
+                                        else
                                         {
-                                            if (sClient.StartsWith(sAncientClient))
+                                            foreach (string sLeechClient in lsLeechClients)
                                             {
-                                                Console.WriteLine("Banned - Ancient Client: " + sClient + ", " + sPeer);
-                                                bBanPeer = true;
-                                                break;
+                                                if (sClient.StartsWith(sLeechClient))
+                                                {
+                                                    Console.WriteLine("Banned - Leech Client:   " + sClient + ", " + sPeer);
+                                                    bBanPeer = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if (!bBanPeer)
+                                            {
+                                                foreach (string sAncientClient in lsAncientClients)
+                                                {
+                                                    if (sClient.StartsWith(sAncientClient))
+                                                    {
+                                                        Console.WriteLine("Banned - Ancient Client: " + sClient + ", " + sPeer);
+                                                        bBanPeer = true;
+                                                        break;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -508,7 +517,7 @@ namespace qBittorrentBlockXunlei
                     hsActiveTorrents.Clear();
 
                     DateTime dtNow = DateTime.Now;
-                    TimeSpan tsLoopCost = dtNow - dtStart;
+                    TimeSpan tsLoopCost = dtNow - dtResetBase;
                     Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsLoopCost.TotalSeconds + " sec.");
 
                     int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsLoopCost.TotalMilliseconds);
