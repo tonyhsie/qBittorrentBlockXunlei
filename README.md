@@ -7,19 +7,21 @@
 
 目前規則是
 
-1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown), Taipei-Torrent dev, trafficConsume, hp/torrent/*, BitComet 1.92 & 1.98, xm/torrent/*, FlashGet, Unknown *, GT *
+1. 該用戶進度為 0，或是從該用戶下載到的量是 0，而且用戶客戶端為 -XL*, Xunlei, 7.*, aria2, Xfplay, dandanplay, FDM, go.torrent, Mozilla, dt/torrent/*, github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown), Taipei-Torrent dev, trafficConsume, hp/torrent/*, BitComet 1.92 & 1.98, xm/torrent/*, FlashGet, Unknown *, GT *, StellarPlayer *, Gopeed dev *, BM *, DT *, HP *, MediaGet*, MS *, WW *
 
-2. 上古用戶端: Azureus (3.* 及以前版本: 2008/7)、Deluge (1.1.* 及以前版本: 2009/1)、qBittorrent (2.* 及以前版本: 2012/7)、TorrentStorm (最後一版: 2005/3)、Transmission (1.* 及以前版本: 2010/5)
+2. 上古用戶端: Azureus (3.* 及以前版本: 2008/7)、Deluge (1.1.* 及以前版本: 2009/1)、qBittorrent (2.* 及以前版本: 2012/7)、TorrentStorm (最後一版: 2005/3)、Transmission (1.* 及以前版本: 2010/5)、BitComet (0.*: 2008/2)
 
-3. 該用戶進度為 0，已上傳給該用戶 10M 以上的量
+3. 用戶端名字 < 4 個字
 
-4. 已上傳給該用戶，超過種子內容大小的數據
+4. 該用戶進度為 0，已上傳給該用戶 10M 以上的量
 
-5. 該用戶回報的進度與上傳量不成比例
+5. 已上傳給該用戶，超過種子內容大小的數據
 
-6. 對於連線到同一種子的 "同一網段的所有客戶端" (如：223.241.234.* 或 [240e:660:150c:*])，如果客戶端的總數 >= 5 時，則同時封鎖這些客戶端
+6. 該用戶回報的進度與上傳量不成比例
 
-7. 在程式啟動時，以及每隔 1 天會清空所有被擋的用戶 IP，避免永久封鎖可能會造成的誤鎖
+7. 對於連線到同一種子的 "同一網段的所有客戶端" (如：223.241.234.* 或 [240e:660:150c:*])，如果客戶端的總數 >= 5 時，則同時封鎖這些客戶端
+
+8. 在程式啟動時，以及每隔 1 天會清空所有被擋的用戶 IP，避免永久封鎖可能會造成的誤鎖
 
 
 
