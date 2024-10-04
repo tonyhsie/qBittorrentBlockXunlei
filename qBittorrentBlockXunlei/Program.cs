@@ -9,14 +9,14 @@ namespace qBittorrentBlockXunlei
 {
     internal class Program
     {
+        static readonly Encoding eOutput = Console.OutputEncoding;
+
         // 時間相關常數
-        static readonly int iPauseBeforeExitMs = 2000;
+        static readonly int iPauseBeforeExitMs = 3000;
         static double dLoopIntervalSeconds = 10;
 
         // 進度檢查單位 (bytes)
         static readonly long lProgressCheckBoundarySize = 30 * 1024 * 1024;
-
-        static readonly Encoding eOutput = Console.OutputEncoding;
 
         static readonly HttpClient client = new HttpClient();
 
@@ -44,9 +44,10 @@ namespace qBittorrentBlockXunlei
         static readonly string sUploadedFieldText = "\"uploaded\":";
         static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
+        static readonly string sNameFieldText = "\"name\":\"";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent" };
-        static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0." };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download (devel) (anacrolix/torrent", "QQDownload" };
+        static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0.", "µTorrent 1.", "uTorrent 1.", "μTorrent 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
         {
@@ -59,7 +60,7 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v240906";
+            Console.Title = "qBittorrentBlockXunlei v241005";
 
             Console.OutputEncoding = Encoding.UTF8;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -156,18 +157,8 @@ namespace qBittorrentBlockXunlei
             double dLoopIntervalMs = dLoopIntervalSeconds * 1000;
             int iLoopIntervalMs = (int)Math.Round(dLoopIntervalMs);
 
-            string responseBody;
-            string peersBody;
-
-            int iResponseStartIndex;
-            int iResponseEndIndex;
-            int iPeersStartIndex;
-            int iPeersEndIndex;
-
-            StringBuilder sbBanPeers = new StringBuilder();
-
             // 取得 WebAPI 版本
-            responseBody = "";
+            string responseBody = "";
             while (responseBody == "")
             {
                 try
@@ -193,17 +184,20 @@ namespace qBittorrentBlockXunlei
 
             DateTime dtLastResetTime = DateTime.Now;
             Console.WriteLine(dtLastResetTime + ", Reset banned IPs!");
-            var response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+            await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
 
+            string sDecimalFormat = "#0.###";
             string[] saStatusToken = new string[] { ",\"status\":" };
+
             Dictionary<string, bool> dPublicTorrents = new Dictionary<string, bool>();
             Dictionary<string, long> dTorrentSizes = new Dictionary<string, long>();
             Dictionary<string, long> dTorrentPieceSizes = new Dictionary<string, long>();
             Dictionary<string, Dictionary<string, decimal>> dTorrentPeerProgresses = new Dictionary<string, Dictionary<string, decimal>>();
             HashSet<string> hsActiveTorrents = new HashSet<string>();
             HashSet<string> hsBannedNetworks = new HashSet<string>();
+            Dictionary<string, HashSet<string>> dBannedPeerNetworks = new Dictionary<string, HashSet<string>>();
 
-            string sDecimalFormat = "#0.###";
+            StringBuilder sbBanPeers = new StringBuilder();
 
             while (true)
             {
@@ -217,11 +211,11 @@ namespace qBittorrentBlockXunlei
                         dtLastResetTime = dtResetBase;
                         Console.WriteLine(dtLastResetTime + ", Reset banned IPs, reset interval: " + ts.TotalDays + " days");
                         hsBannedNetworks.Clear();
-                        response = await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
+                        foreach (string sNetwork in dBannedPeerNetworks.Keys)
+                            dBannedPeerNetworks[sNetwork].Clear();
+                        dBannedPeerNetworks.Clear();
+                        await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
                     }
-
-                    int iTorrentCount = 0;
-                    int iPublicTorrentCount = 0;
 
                     // 取得 torrent hash
                     responseBody = "";
@@ -240,21 +234,28 @@ namespace qBittorrentBlockXunlei
                         }
                     }
 
-                    iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
+                    int iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
+                    int iResponseEndIndex;
                     if ((iResponseStartIndex == -1) || !responseBody.Substring(0, iResponseStartIndex).Contains(sFullUpdateText))
                     {
                         Console.WriteLine("Can't get torrents info!");
                         throw new Exception("Can't get torrents info!");
                     }
 
-                    iResponseStartIndex += sTorrentsObjectText.Length;
+                    int iTorrentCount = 0;
+                    int iPublicTorrentCount = 0;
 
+                    iResponseStartIndex += sTorrentsObjectText.Length;
                     while (iResponseStartIndex != -1)
                     {
                         ++iResponseStartIndex;
                         iResponseEndIndex = responseBody.IndexOf('"', iResponseStartIndex);
                         string sTorrentHash = responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex);
                         ++iTorrentCount;
+
+                        iResponseStartIndex = responseBody.IndexOf(sNameFieldText, iResponseEndIndex) + sNameFieldText.Length;
+                        iResponseEndIndex = responseBody.IndexOf('"', iResponseStartIndex);
+                        string sTorrentName = responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex);
 
                         if (!dPublicTorrents.ContainsKey(sTorrentHash))
                         {
@@ -293,9 +294,10 @@ namespace qBittorrentBlockXunlei
                             Dictionary<string, HashSet<string>> dPeerNetworks = new Dictionary<string, HashSet<string>>();
                             Dictionary<string, string> dPeerToClients = new Dictionary<string, string>();
 
-                            peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
+                            string peersBody = await client.GetStringAsync(sTargetServer + sSync_torrentPeers + sTorrentHash);
 
-                            iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
+                            int iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
+                            int iPeersEndIndex;
                             if ((iPeersStartIndex == -1) || !peersBody.StartsWith(sTorrentPeersStartText))
                             {
                                 Console.WriteLine("Can't get peers list!");
@@ -303,7 +305,6 @@ namespace qBittorrentBlockXunlei
                             }
 
                             iPeersStartIndex += sPeersObjectText.Length;
-
                             while (iPeersStartIndex != -1)
                             {
                                 ++iPeersStartIndex;
@@ -354,9 +355,10 @@ namespace qBittorrentBlockXunlei
                                 bool bBanPeer = false;
 
                                 // 判斷 peer 所屬的 network
+                                string sNetwork = "";
                                 {
                                     char cIpGroupSeparator = '.';
-                                    string sNetwork = sPeer;
+                                    sNetwork = sPeer;
                                     if (sPeer.StartsWith("[::ffff:"))
                                         sNetwork = sNetwork.Substring("[::ffff:".Length);
                                     else if (sPeer[0] == '[')
@@ -369,7 +371,7 @@ namespace qBittorrentBlockXunlei
                                     // 該網段已被 ban
                                     if (hsBannedNetworks.Contains(sNetwork))
                                     {
-                                        Console.WriteLine("Banned - Same Network Clients: " + sClient + ", " + sPeer);
+                                        Console.WriteLine("Banned - Same Network Clients: " + sPeer);
                                         bBanPeer = true;
                                     }
                                     else
@@ -378,6 +380,18 @@ namespace qBittorrentBlockXunlei
                                             dPeerNetworks[sNetwork] = new HashSet<string>();
                                         dPeerNetworks[sNetwork].Add(sPeer);
                                         dPeerToClients[sPeer] = sClient;
+                                    }
+                                }
+
+                                for (int i = 0; i < sClient.Length; ++i)
+                                {
+                                    // 客戶端名稱只允許 ASCII 可顯示字元、'µ'、'μ'
+                                    char c = sClient[i];
+                                    if ((c < 0x20) || ((c > 0x7E) && (c != 0xB5) && (c != 0x03BC)))
+                                    {
+                                        Console.WriteLine("Banned - Weird Client:   " + sClient.Substring(0, i) + "*, " + sPeer);
+                                        bBanPeer = true;
+                                        break;
                                     }
                                 }
 
@@ -468,7 +482,26 @@ namespace qBittorrentBlockXunlei
                                 }
 
                                 if (bBanPeer)
+                                {
                                     sbBanPeers.Append(sPeer + "|");
+
+                                    if (!hsBannedNetworks.Contains(sNetwork))
+                                    {
+                                        if (!dBannedPeerNetworks.ContainsKey(sNetwork))
+                                            dBannedPeerNetworks[sNetwork] = new HashSet<string>();
+                                        dBannedPeerNetworks[sNetwork].Add(sPeer);
+                                        // 同一網段下有 5 個不同 IP 連線都被 ban 了
+                                        if (dBannedPeerNetworks[sNetwork].Count == 5)
+                                        {
+                                            Console.WriteLine("Banned - Network: " + sNetwork + "*" + ((sNetwork[0] == '[') ? "]" : ""));
+                                            hsBannedNetworks.Add(sNetwork);
+                                            dBannedPeerNetworks[sNetwork].Clear();
+                                            dBannedPeerNetworks.Remove(sNetwork);
+                                            dPeerNetworks[sNetwork].Clear();
+                                            dPeerNetworks.Remove(sNetwork);
+                                        }
+                                    }
+                                }
                             }
 
                             foreach (string sNetwork in new List<string>(dPeerNetworks.Keys))
@@ -476,10 +509,11 @@ namespace qBittorrentBlockXunlei
                                 // 同一網段下有 >= 5 個不同 IP 連線
                                 if (dPeerNetworks[sNetwork].Count >= 5)
                                 {
+                                    Console.WriteLine("Banned - Network: " + sNetwork + "*" + ((sNetwork[0] == '[') ? "]" : ""));
                                     hsBannedNetworks.Add(sNetwork);
                                     foreach (string sPeer in dPeerNetworks[sNetwork])
                                     {
-                                        Console.WriteLine("Banned - Same Network Clients: " + dPeerToClients[sPeer] + ", " + sPeer);
+                                        Console.WriteLine("Banned - Same Network Clients: " + dPeerToClients[sPeer] + (dPeerToClients[sPeer].Length > 0 ? ", " : "") + sPeer);
                                         sbBanPeers.Append(sPeer + "|");
                                     }
                                 }
@@ -493,7 +527,7 @@ namespace qBittorrentBlockXunlei
                                 dPublicTorrents.Remove(sTorrentHash);
                                 dTorrentSizes.Remove(sTorrentHash);
                                 dTorrentPieceSizes.Remove(sTorrentHash);
-                                dPeerProgresses.Clear();
+                                dTorrentPeerProgresses[sTorrentHash].Clear();
                                 dTorrentPeerProgresses.Remove(sTorrentHash);
                             }
                         }
@@ -514,7 +548,20 @@ namespace qBittorrentBlockXunlei
                     {
                         sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
 
-                        response = await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
+                        try
+                        {
+                            await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
+                        }
+                        catch (Exception ex)
+                        {
+                            do
+                            {
+                                Console.WriteLine(ex.Message + "\t" + DateTime.Now.ToString());
+                                ex = ex.InnerException;
+                            } while (ex != null);
+                            Thread.Sleep(iPauseBeforeExitMs);
+                        }
+
                         sbBanPeers.Clear();
                     }
 
@@ -533,13 +580,12 @@ namespace qBittorrentBlockXunlei
                     hsActiveTorrents.Clear();
 
                     DateTime dtNow = DateTime.Now;
-                    TimeSpan tsLoopCost = dtNow - dtResetBase;
-                    Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsLoopCost.TotalSeconds + " sec.");
+                    ts = dtNow - dtResetBase;
+                    Console.WriteLine(dtNow + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + ts.TotalSeconds + " sec.");
 
-                    int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsLoopCost.TotalMilliseconds);
+                    int iSleepMs = (int)Math.Round(dLoopIntervalMs - ts.TotalMilliseconds);
                     if (iSleepMs > 0)
                         Thread.Sleep(iSleepMs);
-
                 }
                 catch (Exception ex)
                 {
