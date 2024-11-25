@@ -64,9 +64,12 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            Console.Title = "qBittorrentBlockXunlei v241008";
-
-            Console.OutputEncoding = Encoding.UTF8;
+            bool runInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
+            if (runInTerminal)
+            {
+                Console.Title = "qBittorrentBlockXunlei v241008";
+                Console.OutputEncoding = Encoding.UTF8;
+            }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
 
             bool bRemoteServer = false;
@@ -142,7 +145,10 @@ namespace qBittorrentBlockXunlei
                 }
             }
 
-            Console.Title += "          " + sTargetServer;
+            if (runInTerminal)
+            {
+                Console.Title += "          " + sTargetServer;
+            }
             Console.WriteLine("server address:\t\t" + sTargetServer);
 
             if (bRemoteServer)
