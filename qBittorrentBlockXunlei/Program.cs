@@ -64,10 +64,10 @@ namespace qBittorrentBlockXunlei
 
         static async Task Main(string[] args)
         {
-            bool runInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
-            if (runInTerminal)
+            bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
+            if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v241008";
+                Console.Title = "qBittorrentBlockXunlei v241126";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -145,7 +145,7 @@ namespace qBittorrentBlockXunlei
                 }
             }
 
-            if (runInTerminal)
+            if (bRunInTerminal)
             {
                 Console.Title += "          " + sTargetServer;
             }
@@ -393,15 +393,17 @@ namespace qBittorrentBlockXunlei
                                     }
                                 }
 
-                                for (int i = 0; i < sClient.Length; ++i)
+                                // 客戶端名稱只允許 ASCII 可顯示字元、'µ'、'μ'
+                                if (!bBanPeer)
                                 {
-                                    // 客戶端名稱只允許 ASCII 可顯示字元、'µ'、'μ'
-                                    char c = sClient[i];
-                                    if ((c < 0x20) || ((c > 0x7E) && (c != 0xB5) && (c != 0x03BC)))
+                                    foreach (char c in sClient)
                                     {
-                                        Console.WriteLine("Banned - Weird Client:   " + sClient.Substring(0, i) + "*, " + sPeer);
-                                        bBanPeer = true;
-                                        break;
+                                        if ((c < 0x20) || ((c > 0x7E) && (c != 0xB5) && (c != 0x03BC)))
+                                        {
+                                            Console.WriteLine("Banned - Weird Client:   " + sClient + ", " + sPeer);
+                                            bBanPeer = true;
+                                            break;
+                                        }
                                     }
                                 }
 
