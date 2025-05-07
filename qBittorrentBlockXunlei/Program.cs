@@ -67,7 +67,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v241126";
+                Console.Title = "qBittorrentBlockXunlei v250508";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -224,6 +224,9 @@ namespace qBittorrentBlockXunlei
                         foreach (string sNetwork in dBannedPeerNetworks.Keys)
                             dBannedPeerNetworks[sNetwork].Clear();
                         dBannedPeerNetworks.Clear();
+                        foreach (string sTorrentHash in dTorrentPeerProgresses.Keys)
+                            dTorrentPeerProgresses[sTorrentHash].Clear();
+                        dTorrentPeerProgresses.Clear();
                         await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
                     }
 
