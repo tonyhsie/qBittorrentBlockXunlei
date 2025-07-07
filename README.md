@@ -37,14 +37,12 @@
 [使用需知]
 
 1. 需先設定 qBittorrent 的 WebUI，從 qBittorrent 的「工具」->「選項」裡選擇「WebUI」
-　然後按照下圖設定，並記住你設定的埠號
+　然後按照下圖設定
 
 ![image](https://github.com/tonyhsie/qBittorrentBlockXunlei/assets/52758827/abf6fed3-01a1-4b74-8484-09d11d360145)
 
 
-2. 執行 qBittorrentBlockXunlei.exe，輸入「埠號」即可
-
-　（或在命令列下執行 qBittorrentBlockXunlei [埠號]）
+2. 執行 qBittorrentBlockXunlei.exe 即可
 
 3. 若要停止執行，可直接關掉視窗，或按熱鍵 ctrl-c
 

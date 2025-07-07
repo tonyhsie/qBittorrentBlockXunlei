@@ -147,9 +147,11 @@ namespace qBittorrentBlockXunlei
                         int iStartIndex = sQbittorrentIniContent.IndexOf(sWebUIPort);
                         if (iStartIndex >= 0)
                         {
-                            int iEndIndex = sQbittorrentIniContent.IndexOf('\n', iStartIndex);
-                            sTargetPort = sQbittorrentIniContent.Substring(iStartIndex + sWebUIPort.Length, iEndIndex - iStartIndex - sWebUIPort.Length).Trim();
-                            sTargetServer += sTargetPort;
+                            sTargetPort = sQbittorrentIniContent.Substring(iStartIndex + sWebUIPort.Length, sQbittorrentIniContent.IndexOf('\n', iStartIndex) - iStartIndex - sWebUIPort.Length).Trim();
+                            if (int.TryParse(sTargetPort, out int i) && (i > 0) && (i <= 65535))
+                                sTargetServer += sTargetPort;
+                            else
+                                sTargetPort = "";
                         }
                     }
                 }
