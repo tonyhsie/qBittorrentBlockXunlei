@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -67,7 +68,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v250508";
+                Console.Title = "qBittorrentBlockXunlei v250707";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -128,6 +129,27 @@ namespace qBittorrentBlockXunlei
                         else
                         {
                             Console.WriteLine("illegal loop interval argument!");
+                        }
+                    }
+                }
+            }
+
+            if (sTargetPort == "")
+            {
+                string sWebUIPort = @"WebUI\Port=";
+                string sAppDataDir = Environment.GetEnvironmentVariable("APPDATA");
+                if (sAppDataDir != null)
+                {
+                    string sQbittorrentIniFile = Path.Combine(sAppDataDir, "qBittorrent\\qBittorrent.ini");
+                    if (File.Exists(sQbittorrentIniFile))
+                    {
+                        string sQbittorrentIniContent = File.ReadAllText(sQbittorrentIniFile, Encoding.UTF8);
+                        int iStartIndex = sQbittorrentIniContent.IndexOf(sWebUIPort);
+                        if (iStartIndex >= 0)
+                        {
+                            int iEndIndex = sQbittorrentIniContent.IndexOf('\n', iStartIndex);
+                            sTargetPort = sQbittorrentIniContent.Substring(iStartIndex + sWebUIPort.Length, iEndIndex - iStartIndex - sWebUIPort.Length).Trim();
+                            sTargetServer += sTargetPort;
                         }
                     }
                 }
