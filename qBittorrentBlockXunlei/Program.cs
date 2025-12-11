@@ -51,7 +51,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sProgressFieldText = "\"progress\":";
         static readonly string sUploadedFieldText = "\"uploaded\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download (devel) (anacrolix/torrent", "QQDownload" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download", "QQDownload" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0.", "µTorrent 1.", "uTorrent 1.", "μTorrent 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -68,7 +68,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v250707";
+                Console.Title = "qBittorrentBlockXunlei v251211";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -274,10 +274,7 @@ namespace qBittorrentBlockXunlei
                     int iResponseStartIndex = responseBody.IndexOf(sTorrentsObjectText);
                     int iResponseEndIndex;
                     if ((iResponseStartIndex == -1) || !responseBody.Substring(0, iResponseStartIndex).Contains(sFullUpdateText))
-                    {
-                        Console.WriteLine("Can't get torrents info!");
                         throw new Exception("Can't get torrents info!");
-                    }
 
                     int iTorrentCount = 0;
                     int iPublicTorrentCount = 0;
@@ -400,10 +397,10 @@ namespace qBittorrentBlockXunlei
                                         sNetwork = sNetwork.Substring("[::ffff:".Length);
                                     else if (sPeer[0] == '[')
                                         cIpGroupSeparator = ':';
-                                    int Iindex = 0;
+                                    int iIndex = 0;
                                     for (int i = 0; i < 3; ++i)
-                                        Iindex = sNetwork.IndexOf(cIpGroupSeparator, Iindex) + 1;
-                                    sNetwork = sNetwork.Substring(0, Iindex);
+                                        iIndex = sNetwork.IndexOf(cIpGroupSeparator, iIndex) + 1;
+                                    sNetwork = sNetwork.Substring(0, iIndex);
 
                                     // 該網段已被 ban
                                     if (hsBannedNetworks.Contains(sNetwork))
