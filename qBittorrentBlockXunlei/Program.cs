@@ -51,7 +51,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sProgressFieldText = "\"progress\":";
         static readonly string sUploadedFieldText = "\"uploaded\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download", "QQDownload" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download", "QQDownload", "git.woa.com" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0.", "µTorrent 1.", "uTorrent 1.", "μTorrent 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -68,7 +68,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v251211";
+                Console.Title = "qBittorrentBlockXunlei v260105";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
