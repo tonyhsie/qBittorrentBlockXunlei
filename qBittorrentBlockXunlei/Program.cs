@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +21,7 @@ namespace qBittorrentBlockXunlei
         // 進度檢查單位 (bytes)
         static readonly long lProgressCheckBoundarySize = 30 * 1024 * 1024;
 
-        static readonly HttpClient client = new HttpClient();
+        static HttpClient client;
 
         static readonly string sAuth_login = "/api/v2/auth/login";
         static readonly string sApp_webapiVersion = "/api/v2/app/webapiVersion";
@@ -74,6 +76,7 @@ namespace qBittorrentBlockXunlei
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
 
             bool bRemoteServer = false;
+            bool bIgnoreCertificate = false;
 
             string sTargetServer = "http://localhost:";
             string sTargetPort = "";
@@ -84,22 +87,31 @@ namespace qBittorrentBlockXunlei
             if (args.Length > 0)
             {
                 int iArgumentIndex = 0;
-                int iColonIndex = args[0].IndexOf(':');
 
-                if (iColonIndex != -1)
+                // 尝试 Uri 解析
+                Uri targetUri;
+                if (Uri.TryCreate(args[0], UriKind.Absolute, out targetUri))
                 {
-                    sTargetPort = args[0].Substring(iColonIndex + 1);
-                    if ((args.Length >= 3) && int.TryParse(sTargetPort, out int j) && (j > 0) && (j <= 65535))
+                    if ((targetUri.Port > 0) && (targetUri.Port <= 65535))
                     {
-                        if (!args[0].StartsWith("http://"))
-                            sTargetServer = "http://" + args[0];
-                        else
-                            sTargetServer = args[0];
-                        sTargetUsername = args[1];
-                        sTargetPassword = args[2];
-                        bRemoteServer = true;
+                        sTargetPort = targetUri.Port.ToString();
+                        sTargetServer = targetUri.Scheme + "://" + targetUri.Host + ":" + sTargetPort;
+                        if (targetUri.AbsolutePath != "/")
+                        {
+                            sTargetServer += targetUri.AbsolutePath;
+                        }
 
-                        iArgumentIndex += 3;
+                        if (args.Length >= 3)
+                        {
+                            sTargetUsername = args[1];
+                            sTargetPassword = args[2];
+                            bRemoteServer = true;
+                            iArgumentIndex = 3;
+                        }
+                        else
+                        {
+                            iArgumentIndex = 1;
+                        }
                     }
                     else
                     {
@@ -107,12 +119,37 @@ namespace qBittorrentBlockXunlei
                         CCEHandler(null, null);
                     }
                 }
-                else if (int.TryParse(args[0], out int k) && (k > 0) && (k <= 65535))
+                else
                 {
-                    sTargetPort = args[0];
-                    sTargetServer += sTargetPort;
+                    int iColonIndex = args[0].IndexOf(':');
 
-                    iArgumentIndex += 1;
+                    if (iColonIndex != -1)
+                    {
+                        // 例如 127.0.0.1:8080
+                        sTargetPort = args[0].Substring(iColonIndex + 1);
+                        if ((args.Length >= 3) && int.TryParse(sTargetPort, out int j) && (j > 0) && (j <= 65535))
+                        {
+                            sTargetServer = "http://" + args[0];
+                            sTargetUsername = args[1];
+                            sTargetPassword = args[2];
+                            bRemoteServer = true;
+
+                            iArgumentIndex += 3;
+                        }
+                        else
+                        {
+                            Console.WriteLine("illegal server address: " + args[0]);
+                            CCEHandler(null, null);
+                        }
+                    }
+                    else if (int.TryParse(args[0], out int k) && (k > 0) && (k <= 65535))
+                    {
+                        // 纯端口：本机 http://localhost:port
+                        sTargetPort = args[0];
+                        sTargetServer += sTargetPort;
+
+                        iArgumentIndex += 1;
+                    }
                 }
 
                 for (int i = iArgumentIndex; i < args.Length; ++i)
@@ -130,6 +167,12 @@ namespace qBittorrentBlockXunlei
                         {
                             Console.WriteLine("illegal loop interval argument!");
                         }
+                    }
+                    else if (args[i].Equals("/insecure", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-insecure", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 忽略 HTTPS 证书错误
+                        bIgnoreCertificate = true;
+                        Console.WriteLine("WARNING: ignore TLS certificate errors is ENABLED.");
                     }
                 }
             }
@@ -175,15 +218,48 @@ namespace qBittorrentBlockXunlei
             }
             Console.WriteLine("server address:\t\t" + sTargetServer);
 
+            HttpClientHandler handler;
+            if (bIgnoreCertificate)
+            {
+                handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+            }
+            else
+            {
+                handler = new HttpClientHandler();
+            }
+            client = new HttpClient(handler);
+
             if (bRemoteServer)
             {
                 try
                 {
                     (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    bool bCertError = false;
+
+                    Exception inner = ex;
+                    while (inner != null)
+                    {
+                        var webEx = inner as WebException;
+                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        {
+                            bCertError = true;
+                            break;
+                        }
+                        inner = inner.InnerException;
+                    }
+
                     Console.WriteLine("Can't login to remote server " + sTargetServer + ", please check related settings again!");
+                    if (bCertError)
+                    {
+                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
+                    }
+
                     CCEHandler(null, null);
                 }
             }
@@ -199,9 +275,28 @@ namespace qBittorrentBlockXunlei
                 {
                     responseBody = await client.GetStringAsync(sTargetServer + sApp_webapiVersion);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    bool bCertError = false;
+
+                    Exception inner = ex;
+                    while (inner != null)
+                    {
+                        var webEx = inner as WebException;
+                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        {
+                            bCertError = true;
+                            break;
+                        }
+                        inner = inner.InnerException;
+                    }
+
                     Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
+                    if (bCertError)
+                    {
+                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
+                    }
+
                     Thread.Sleep(iLoopIntervalMs);
                 }
             }
