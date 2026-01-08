@@ -238,9 +238,28 @@ namespace qBittorrentBlockXunlei
                 {
                     (await client.PostAsync(sTargetServer + sAuth_login, new FormUrlEncodedContent(new Dictionary<string, string>() { { "username", sTargetUsername }, { "password", sTargetPassword } }))).EnsureSuccessStatusCode();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    bool bCertError = false;
+
+                    Exception inner = ex;
+                    while (inner != null)
+                    {
+                        var webEx = inner as WebException;
+                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        {
+                            bCertError = true;
+                            break;
+                        }
+                        inner = inner.InnerException;
+                    }
+
                     Console.WriteLine("Can't login to remote server " + sTargetServer + ", please check related settings again!");
+                    if (bCertError)
+                    {
+                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
+                    }
+
                     CCEHandler(null, null);
                 }
             }
@@ -256,9 +275,28 @@ namespace qBittorrentBlockXunlei
                 {
                     responseBody = await client.GetStringAsync(sTargetServer + sApp_webapiVersion);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    bool bCertError = false;
+
+                    Exception inner = ex;
+                    while (inner != null)
+                    {
+                        var webEx = inner as WebException;
+                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        {
+                            bCertError = true;
+                            break;
+                        }
+                        inner = inner.InnerException;
+                    }
+
                     Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
+                    if (bCertError)
+                    {
+                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
+                    }
+
                     Thread.Sleep(iLoopIntervalMs);
                 }
             }
