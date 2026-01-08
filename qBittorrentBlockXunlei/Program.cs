@@ -96,6 +96,10 @@ namespace qBittorrentBlockXunlei
                     {
                         sTargetPort = targetUri.Port.ToString();
                         sTargetServer = targetUri.Scheme + "://" + targetUri.Host + ":" + sTargetPort;
+                        if (targetUri.AbsolutePath != "/")
+                        {
+                            sTargetServer += targetUri.AbsolutePath;
+                        }
 
                         if (args.Length >= 3)
                         {
