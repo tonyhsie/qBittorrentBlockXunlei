@@ -50,7 +50,9 @@
 
 5. 可由本機遙控遠端的 qBittorrent，語法：qBittorrentBlockXunlei [遠端位址:埠號 "帳號" "密碼"] [/i 間隔秒數]
 
-6. 如何確認此程式真的有作用？
+6. 可使用 /insecure 參數，來強制連接證書不安全的 https
+
+7. 如何確認此程式真的有作用？
 
 　可使用瀏覽器打開 http://127.0.0.1:54937/api/v2/app/preferences (54937 請自行代換成你先前設定的埠號)
 

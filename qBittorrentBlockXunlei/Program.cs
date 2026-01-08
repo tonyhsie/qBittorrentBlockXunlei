@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -70,7 +69,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v260105";
+                Console.Title = "qBittorrentBlockXunlei v260109";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -89,8 +88,7 @@ namespace qBittorrentBlockXunlei
                 int iArgumentIndex = 0;
 
                 // 尝试 Uri 解析
-                Uri targetUri;
-                if (Uri.TryCreate(args[0], UriKind.Absolute, out targetUri))
+                if (Uri.TryCreate(args[0], UriKind.Absolute, out Uri targetUri))
                 {
                     if ((targetUri.Port > 0) && (targetUri.Port <= 65535))
                     {
@@ -245,8 +243,7 @@ namespace qBittorrentBlockXunlei
                     Exception inner = ex;
                     while (inner != null)
                     {
-                        var webEx = inner as WebException;
-                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        if (inner is WebException webEx && webEx.Status == WebExceptionStatus.TrustFailure)
                         {
                             bCertError = true;
                             break;
@@ -282,8 +279,7 @@ namespace qBittorrentBlockXunlei
                     Exception inner = ex;
                     while (inner != null)
                     {
-                        var webEx = inner as WebException;
-                        if (webEx != null && webEx.Status == WebExceptionStatus.TrustFailure)
+                        if (inner is WebException webEx && webEx.Status == WebExceptionStatus.TrustFailure)
                         {
                             bCertError = true;
                             break;
