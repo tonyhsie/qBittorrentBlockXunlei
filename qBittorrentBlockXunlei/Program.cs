@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -96,9 +97,42 @@ namespace qBittorrentBlockXunlei
             Environment.Exit(0);
         }
 
+        static void KillOldProcesses()
+        {
+            try
+            {
+                Process pCurrent = Process.GetCurrentProcess();
+                Process[] pOld = Process.GetProcessesByName(pCurrent.ProcessName);
+
+                foreach (Process p in pOld)
+                {
+                    if (p.Id != pCurrent.Id)
+                    {
+                        Console.WriteLine($"Found existing process (PID: {p.Id}), terminating...");
+                        try
+                        {
+                            p.Kill();
+                            p.WaitForExit(3000);
+                            Console.WriteLine($"Process (PID: {p.Id}) terminated.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to terminate process (PID: {p.Id}): {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error during process check: " + ex.Message);
+            }
+        }
+
         [STAThread]
         static void Main(string[] args)
         {
+            KillOldProcesses();
+
             bool bStartInTray = false;
             List<string> lsFilteredArgs = new List<string>();
 
@@ -113,7 +147,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v260115";
+                Console.Title = "qBittorrentBlockXunlei v260115-2";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -141,8 +175,7 @@ namespace qBittorrentBlockXunlei
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Fatal Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        CCEHandler(null, null);
+                        ShowErrorMessage("Fatal Error: " + ex.Message);
                     }
                 });
 
@@ -156,8 +189,8 @@ namespace qBittorrentBlockXunlei
             }
         }
 
-        // 繪製圖示 (深紅色圓形背景，白色 Q 字)
-        static Icon CreateIcon()
+        // 繪製正常圖示 (深紅色圓形背景，白色 Q 字)
+        static Icon CreateNormalIcon()
         {
             int iSize = 32;
             Bitmap bmp = new Bitmap(iSize, iSize);
@@ -175,7 +208,6 @@ namespace qBittorrentBlockXunlei
                 {
                     g.DrawEllipse(penBorder, rectBackground);
                 }
-
                 using (Pen penWhite = new Pen(Color.White, 3.5f))
                 {
                     g.DrawEllipse(penWhite, 7, 7, 17, 17);
@@ -189,13 +221,68 @@ namespace qBittorrentBlockXunlei
             return Icon.FromHandle(bmp.GetHicon());
         }
 
+        // 繪製錯誤圖示 (白色圓形背景，紅色 X 字)
+        static Icon CreateErrorIcon()
+        {
+            int iSize = 32;
+            Bitmap bmp = new Bitmap(iSize, iSize);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                Rectangle rectBackground = new Rectangle(0, 0, iSize - 1, iSize - 1);
+                using (Brush brush = new SolidBrush(Color.White))
+                {
+                    g.FillEllipse(brush, rectBackground);
+                }
+                using (Pen penBorder = new Pen(Color.Red, 1))
+                {
+                    g.DrawEllipse(penBorder, rectBackground);
+                }
+                using (Pen penRed = new Pen(Color.Red, 3.5f))
+                {
+                    penRed.StartCap = LineCap.Round;
+                    penRed.EndCap = LineCap.Round;
+
+                    // 畫交叉線 (位置參考 Q 字的大小調整)
+                    g.DrawLine(penRed, 9, 9, 23, 23);
+                    g.DrawLine(penRed, 23, 9, 9, 23);
+                }
+            }
+            return Icon.FromHandle(bmp.GetHicon());
+        }
+
+        // 顯示錯誤狀態：切換圖示並秀出錯誤
+        static void ShowErrorMessage(string errorMessage)
+        {
+            Console.WriteLine("[ERROR] : " + errorMessage);
+
+            if (niTrayIcon != null)
+            {
+                // 切換為錯誤圖示
+                niTrayIcon.Icon = CreateErrorIcon();
+
+                // 更新 Tooltip (限制長度以免崩潰)
+                string title = "Error: " + errorMessage;
+                if (title.Length >= 63)
+                    title = title.Substring(0, 60) + "...";
+                niTrayIcon.Text = title;
+            }
+            else
+            {
+                // 如果不是 Tray 模式，直接退出
+                CCEHandler(null, null);
+            }
+        }
+
         // 初始化系統列圖示
         static void InitialTrayIcon()
         {
             niTrayIcon = new NotifyIcon
             {
                 Text = "qBittorrentBlockXunlei",
-                Icon = CreateIcon(),
+                Icon = CreateNormalIcon(),
                 Visible = true
             };
 
@@ -288,10 +375,9 @@ namespace qBittorrentBlockXunlei
                     }
                     else
                     {
-                        Console.WriteLine("illegal server address: " + args[0]);
+                        ShowErrorMessage("illegal server address: " + args[0]);
                         if (niTrayIcon != null)
-                            MessageBox.Show("Illegal server address: " + args[0], "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        CCEHandler(null, null);
+                            return;
                     }
                 }
                 else
@@ -313,10 +399,9 @@ namespace qBittorrentBlockXunlei
                         }
                         else
                         {
-                            Console.WriteLine("illegal server address: " + args[0]);
+                            ShowErrorMessage("illegal server address: " + args[0]);
                             if (niTrayIcon != null)
-                                MessageBox.Show("Illegal server address: " + args[0], "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            CCEHandler(null, null);
+                                return;
                         }
                     }
                     else if (int.TryParse(args[0], out int k) && (k > 0) && (k <= 65535))
@@ -380,13 +465,7 @@ namespace qBittorrentBlockXunlei
             // 取得 port number
             while (sTargetPort == "")
             {
-                // 如果在系統列模式下且找不到 Port，無法使用 Console.ReadLine()，必須退出
-                if (niTrayIcon != null)
-                {
-                    MessageBox.Show("Could not detect qBittorrent Port automatically.\nPlease provide arguments when starting in Tray mode.\n\nExample: qBittorrentBlockXunlei.exe 8080 /Tray", "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    CCEHandler(null, null);
-                    return;
-                }
+                ShowErrorMessage("Configuration Error: Port not detected!");
 
                 Console.Write("Port Number = ");
                 args = Console.ReadLine().Split(' ');
@@ -438,16 +517,12 @@ namespace qBittorrentBlockXunlei
                         inner = inner.InnerException;
                     }
 
-                    Console.WriteLine("Login failed to remote server: " + sTargetServer);
+                    ShowErrorMessage("Login failed: " + sTargetServer);
                     if (bCertError)
-                    {
-                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
-                    }
+                        Console.WriteLine("TLS error. Try use /insecure to ignore.");
 
                     if (niTrayIcon != null)
-                        MessageBox.Show("Login failed to remote server: " + sTargetServer, "Login Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                    CCEHandler(null, null);
+                        return;
                 }
             }
 
@@ -479,9 +554,7 @@ namespace qBittorrentBlockXunlei
 
                     Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
                     if (bCertError)
-                    {
-                        Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
-                    }
+                        Console.WriteLine("TLS error. Try use /insecure to ignore.");
 
                     Thread.Sleep(iLoopIntervalMs);
                 }
@@ -492,10 +565,9 @@ namespace qBittorrentBlockXunlei
                 string[] saVersion = responseBody.Split('.');
                 if ((saVersion.Length < 2) || !int.TryParse(saVersion[0], out int iMajorVersion) || (iMajorVersion < 2) || !int.TryParse(saVersion[1], out int iMinorVersion) || ((iMajorVersion == 2) && (iMinorVersion < 3)))
                 {
-                    Console.WriteLine("Please upgrade your qBittorrent first!");
+                    ShowErrorMessage("Version Error: qBittorrent >= 2.3 required.");
                     if (niTrayIcon != null)
-                        MessageBox.Show("Please upgrade your qBittorrent first!", "Version Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    CCEHandler(null, null);
+                        return;
                 }
             }
 
@@ -753,15 +825,6 @@ namespace qBittorrentBlockXunlei
                                             }
                                         }
                                     }
-
-                                    /*
-                                    // 可疑的 port
-                                    if ((iPort == 12345) || (iPort == 2011) || (iPort == 2013) || (iPort == 54321) || (iPort == 15000) || (iPort < 2100))
-                                    {
-                                        Console.WriteLine("Banned by Port: " + iPort + ", " + sPeer);
-                                        sbBanPeers.Append(sPeer + "|");
-                                    }
-                                    */
                                 }
 
                                 if (!bBanPeer && (sFlags.IndexOf('U') != -1) && (dTorrentSizes[sTorrentHash] > 0))
