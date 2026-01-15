@@ -1,16 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace qBittorrentBlockXunlei
 {
     internal class Program
     {
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetSystemMenu(IntPtr hWnd, bool bRevert);
+
+        [DllImport("user32.dll")]
+        static extern bool DeleteMenu(IntPtr hMenu, uint uPosition, uint uFlags);
+
+        const int SW_HIDE = 0;
+        const int SW_SHOW = 5;
+
+        static NotifyIcon niTrayIcon;
+        static bool bConsoleVisible = true;
+
         static readonly Encoding eOutput = Console.OutputEncoding;
 
         // 時間相關常數
@@ -57,6 +82,13 @@ namespace qBittorrentBlockXunlei
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
         {
+            // 程式退出時清理系統列圖示
+            if (niTrayIcon != null)
+            {
+                niTrayIcon.Visible = false;
+                niTrayIcon.Dispose();
+            }
+
             if ((sender != null) || (args != null))
                 Console.WriteLine(Environment.NewLine + "Ctrl-C is pressed!");
             Console.OutputEncoding = eOutput;
@@ -64,16 +96,159 @@ namespace qBittorrentBlockXunlei
             Environment.Exit(0);
         }
 
-        static async Task Main(string[] args)
+        [STAThread]
+        static void Main(string[] args)
         {
+            bool bStartInTray = false;
+            List<string> lsFilteredArgs = new List<string>();
+
+            foreach (var arg in args)
+            {
+                if (arg.Equals("/tray", StringComparison.OrdinalIgnoreCase) || arg.Equals("-tray", StringComparison.OrdinalIgnoreCase))
+                    bStartInTray = true;
+                else
+                    lsFilteredArgs.Add(arg);
+            }
+
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v260109";
+                Console.Title = "qBittorrentBlockXunlei v260115";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
 
+            // 系統列模式
+            if (bStartInTray)
+            {
+                // 禁用 Console 的「關閉」按鈕
+                DisableCloseButton();
+
+                // 隱藏 Console
+                var handle = GetConsoleWindow();
+                ShowWindow(handle, SW_HIDE);
+                bConsoleVisible = false;
+
+                // 初始化系統列圖示
+                InitialTrayIcon();
+
+                // 在背景執行
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RunMainLoopAsync(lsFilteredArgs.ToArray(), bRunInTerminal);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Fatal Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        CCEHandler(null, null);
+                    }
+                });
+
+                // 啟動訊息迴圈，保持圖示運作
+                Application.Run();
+            }
+            // 原有的 Console 模式
+            else
+            {
+                RunMainLoopAsync(lsFilteredArgs.ToArray(), bRunInTerminal).GetAwaiter().GetResult();
+            }
+        }
+
+        // 繪製圖示 (深紅色圓形背景，白色 Q 字)
+        static Icon CreateIcon()
+        {
+            int iSize = 32;
+            Bitmap bmp = new Bitmap(iSize, iSize);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                Rectangle rectBackground = new Rectangle(0, 0, iSize - 1, iSize - 1);
+                using (Brush brush = new SolidBrush(Color.DarkRed))
+                {
+                    g.FillEllipse(brush, rectBackground);
+                }
+                using (Pen penBorder = new Pen(Color.Red, 1))
+                {
+                    g.DrawEllipse(penBorder, rectBackground);
+                }
+
+                using (Pen penWhite = new Pen(Color.White, 3.5f))
+                {
+                    g.DrawEllipse(penWhite, 7, 7, 17, 17);
+
+                    penWhite.StartCap = LineCap.Round;
+                    penWhite.EndCap = LineCap.Round;
+
+                    g.DrawLine(penWhite, 18, 20, 24, 26);
+                }
+            }
+            return Icon.FromHandle(bmp.GetHicon());
+        }
+
+        // 初始化系統列圖示
+        static void InitialTrayIcon()
+        {
+            niTrayIcon = new NotifyIcon
+            {
+                Text = "qBittorrentBlockXunlei",
+                Icon = CreateIcon(),
+                Visible = true
+            };
+
+            niTrayIcon.MouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                    ToggleConsoleWindow();
+            };
+
+            // 建立右鍵選單
+            ContextMenuStrip cmsMenu = new ContextMenuStrip();
+
+            ToolStripMenuItem tsmiToggle = new ToolStripMenuItem("Show/Hide");
+            tsmiToggle.Click += (s, e) => ToggleConsoleWindow();
+
+            ToolStripMenuItem tsmiExit = new ToolStripMenuItem("Exit");
+            tsmiExit.Click += (s, e) => CCEHandler(null, null);
+
+            cmsMenu.Items.Add(tsmiToggle);
+            cmsMenu.Items.Add(new ToolStripSeparator());
+            cmsMenu.Items.Add(tsmiExit);
+
+            niTrayIcon.ContextMenuStrip = cmsMenu;
+        }
+
+        // 禁用 Console 的關閉按鈕
+        static void DisableCloseButton()
+        {
+            IntPtr hConsole = GetConsoleWindow();
+            IntPtr hMenu = GetSystemMenu(hConsole, false);
+            if (hMenu != IntPtr.Zero)
+                DeleteMenu(hMenu, 0xF060, 0x00000000);
+        }
+
+        // 切換 Console 視窗顯示/隱藏
+        static void ToggleConsoleWindow()
+        {
+            var handle = GetConsoleWindow();
+            if (bConsoleVisible)
+            {
+                ShowWindow(handle, SW_HIDE);
+                bConsoleVisible = false;
+            }
+            else
+            {
+                ShowWindow(handle, SW_SHOW);
+                SetForegroundWindow(handle);
+                bConsoleVisible = true;
+            }
+        }
+
+        static async Task RunMainLoopAsync(string[] args, bool bRunInTerminal)
+        {
             bool bRemoteServer = false;
             bool bIgnoreCertificate = false;
 
@@ -114,6 +289,8 @@ namespace qBittorrentBlockXunlei
                     else
                     {
                         Console.WriteLine("illegal server address: " + args[0]);
+                        if (niTrayIcon != null)
+                            MessageBox.Show("Illegal server address: " + args[0], "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         CCEHandler(null, null);
                     }
                 }
@@ -137,6 +314,8 @@ namespace qBittorrentBlockXunlei
                         else
                         {
                             Console.WriteLine("illegal server address: " + args[0]);
+                            if (niTrayIcon != null)
+                                MessageBox.Show("Illegal server address: " + args[0], "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             CCEHandler(null, null);
                         }
                     }
@@ -201,6 +380,14 @@ namespace qBittorrentBlockXunlei
             // 取得 port number
             while (sTargetPort == "")
             {
+                // 如果在系統列模式下且找不到 Port，無法使用 Console.ReadLine()，必須退出
+                if (niTrayIcon != null)
+                {
+                    MessageBox.Show("Could not detect qBittorrent Port automatically.\nPlease provide arguments when starting in Tray mode.\n\nExample: qBittorrentBlockXunlei.exe 8080 /Tray", "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    CCEHandler(null, null);
+                    return;
+                }
+
                 Console.Write("Port Number = ");
                 args = Console.ReadLine().Split(' ');
                 if ((args.Length > 0) && int.TryParse(args[0], out int i) && (i > 0) && (i <= 65535))
@@ -251,11 +438,14 @@ namespace qBittorrentBlockXunlei
                         inner = inner.InnerException;
                     }
 
-                    Console.WriteLine("Can't login to remote server " + sTargetServer + ", please check related settings again!");
+                    Console.WriteLine("Login failed to remote server: " + sTargetServer);
                     if (bCertError)
                     {
                         Console.WriteLine("It looks like a TLS certificate error. If you are using a self-signed certificate, you can add /insecure parameter to ignore certificate errors.");
                     }
+
+                    if (niTrayIcon != null)
+                        MessageBox.Show("Login failed to remote server: " + sTargetServer, "Login Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     CCEHandler(null, null);
                 }
@@ -303,6 +493,8 @@ namespace qBittorrentBlockXunlei
                 if ((saVersion.Length < 2) || !int.TryParse(saVersion[0], out int iMajorVersion) || (iMajorVersion < 2) || !int.TryParse(saVersion[1], out int iMinorVersion) || ((iMajorVersion == 2) && (iMinorVersion < 3)))
                 {
                     Console.WriteLine("Please upgrade your qBittorrent first!");
+                    if (niTrayIcon != null)
+                        MessageBox.Show("Please upgrade your qBittorrent first!", "Version Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     CCEHandler(null, null);
                 }
             }

@@ -42,7 +42,7 @@
 ![image](https://github.com/tonyhsie/qBittorrentBlockXunlei/assets/52758827/abf6fed3-01a1-4b74-8484-09d11d360145)
 
 
-2. 執行 qBittorrentBlockXunlei.exe 即可
+2. 執行 qBittorrentBlockXunlei.exe 或 qbx.cmd (系統列模式) 即可
 
 3. 若要停止執行，可直接關掉視窗，或按熱鍵 ctrl-c
 
@@ -52,7 +52,9 @@
 
 6. 可使用 /insecure 參數，來強制連接證書不安全的 https
 
-7. 如何確認此程式真的有作用？
+7. 可使用 /tray 參數，讓程式自動縮小到系統列 (單擊系統列的圖示，可開啟/關閉 Console 視窗；右鍵點擊圖示，則可選擇開啟/關閉，或離開程式)
+
+8. 如何確認此程式真的有作用？
 
 　可使用瀏覽器打開 http://127.0.0.1:54937/api/v2/app/preferences (54937 請自行代換成你先前設定的埠號)
 
