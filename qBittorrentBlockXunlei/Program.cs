@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -78,7 +77,7 @@ namespace qBittorrentBlockXunlei
         static readonly string sProgressFieldText = "\"progress\":";
         static readonly string sUploadedFieldText = "\"uploaded\":";
 
-        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download", "QQDownload", "git.woa.com" };
+        static readonly List<string> lsLeechClients = new List<string>() { "-XL", "Xunlei", "XunLei", "7.", "aria2", "Xfplay", "dandanplay", "FDM", "go.torrent", "Mozilla", "github.com/anacrolix/torrent (devel) (anacrolix/torrent unknown)", "dt/torrent/", "Taipei-Torrent dev", "trafficConsume", "hp/torrent/", "BitComet 1.92", "BitComet 1.98", "xm/torrent/", "flashget", "FlashGet", "StellarPlayer", "Gopeed", "MediaGet", "aD/", "ADM", "coc_coc_browser", "FileCroc", "filecxx", "Folx", "seanime (devel) (anacrolix/torrent", "HitomiDownloader", "gateway (devel) (anacrolix/torrent", "offline-download", "QQDownload", "git.woa.com", "iLivid" };
         static readonly List<string> lsAncientClients = new List<string>() { "TorrentStorm", "Azureus 1.", "Azureus 2.", "Azureus 3.", "Deluge 0.", "Deluge 1.0", "Deluge 1.1", "qBittorrent 0.", "qBittorrent 1.", "qBittorrent 2.", "Transmission 0.", "Transmission 1.", "BitComet 0.", "µTorrent 1.", "uTorrent 1.", "μTorrent 1." };
 
         static void CCEHandler(object sender, ConsoleCancelEventArgs args)
@@ -97,49 +96,16 @@ namespace qBittorrentBlockXunlei
             Environment.Exit(0);
         }
 
-        static void KillOldProcesses()
-        {
-            try
-            {
-                Process pCurrent = Process.GetCurrentProcess();
-                Process[] pOld = Process.GetProcessesByName(pCurrent.ProcessName);
-
-                foreach (Process p in pOld)
-                {
-                    if (p.Id != pCurrent.Id)
-                    {
-                        Console.WriteLine($"Found existing process (PID: {p.Id}), terminating...");
-                        try
-                        {
-                            p.Kill();
-                            p.WaitForExit(3000);
-                            Console.WriteLine($"Process (PID: {p.Id}) terminated.");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Failed to terminate process (PID: {p.Id}): {ex.Message}");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error during process check: " + ex.Message);
-            }
-        }
-
         [STAThread]
         static void Main(string[] args)
         {
-            KillOldProcesses();
-
-            bool bStartInTray = false;
+            bool bStartInTray = true;
             List<string> lsFilteredArgs = new List<string>();
 
             foreach (var arg in args)
             {
-                if (arg.Equals("/tray", StringComparison.OrdinalIgnoreCase) || arg.Equals("-tray", StringComparison.OrdinalIgnoreCase))
-                    bStartInTray = true;
+                if (arg.Equals("/notray", StringComparison.OrdinalIgnoreCase) || arg.Equals("-notray", StringComparison.OrdinalIgnoreCase))
+                    bStartInTray = false;
                 else
                     lsFilteredArgs.Add(arg);
             }
@@ -147,7 +113,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v260115-2";
+                Console.Title = "qBittorrentBlockXunlei v260224";
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
