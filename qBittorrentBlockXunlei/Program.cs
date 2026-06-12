@@ -36,6 +36,8 @@ namespace qBittorrentBlockXunlei
         static NotifyIcon niTrayIcon;
         static bool bConsoleVisible = true;
 
+        static readonly string sVersion = "v260612";
+
         static readonly Encoding eOutput = Console.OutputEncoding;
 
         // 時間相關常數
@@ -113,7 +115,7 @@ namespace qBittorrentBlockXunlei
             bool bRunInTerminal = Environment.UserInteractive && !Console.IsOutputRedirected;
             if (bRunInTerminal)
             {
-                Console.Title = "qBittorrentBlockXunlei v260224";
+                Console.Title = "qBittorrentBlockXunlei " + sVersion;
                 Console.OutputEncoding = Encoding.UTF8;
             }
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CCEHandler);
@@ -384,7 +386,7 @@ namespace qBittorrentBlockXunlei
                 {
                     if (args[i].Equals("/i", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-i", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (((i + 1) < args.Length) && double.TryParse(args[i + 1], out double d) && (d >= 0))
+                        if (((i + 1) < args.Length) && double.TryParse(args[i + 1], out double d) && (d >= 1))
                         {
                             dLoopIntervalSeconds = d;
 
@@ -492,8 +494,7 @@ namespace qBittorrentBlockXunlei
                 }
             }
 
-            double dLoopIntervalMs = dLoopIntervalSeconds * 1000;
-            int iLoopIntervalMs = (int)Math.Round(dLoopIntervalMs);
+            TimeSpan tsLoopInterval = TimeSpan.FromSeconds(dLoopIntervalSeconds);
 
             // 取得 WebAPI 版本
             string responseBody = "";
@@ -522,7 +523,7 @@ namespace qBittorrentBlockXunlei
                     if (bCertError)
                         Console.WriteLine("TLS error. Try use /insecure to ignore.");
 
-                    Thread.Sleep(iLoopIntervalMs);
+                    Thread.Sleep(tsLoopInterval);
                 }
             }
 
@@ -542,7 +543,8 @@ namespace qBittorrentBlockXunlei
             await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
 
             string sDecimalFormat = "#0.###";
-            string[] saStatusToken = new string[] { ",\"status\":" };
+            string[] saUrlToken = new string[] { ",\"url\":" };
+            string sStatusFieldText = ",\"status\":";
 
             Dictionary<string, bool> dPublicTorrents = new Dictionary<string, bool>();
             Dictionary<string, long> dTorrentSizes = new Dictionary<string, long>();
@@ -588,7 +590,7 @@ namespace qBittorrentBlockXunlei
                         catch
                         {
                             Console.WriteLine("Can't connect to qBittorrent WebUI, wait " + dLoopIntervalSeconds + " sec. to reconnect!");
-                            Thread.Sleep(iLoopIntervalMs);
+                            Thread.Sleep(tsLoopInterval);
                         }
                     }
 
@@ -615,10 +617,10 @@ namespace qBittorrentBlockXunlei
                         if (!dPublicTorrents.ContainsKey(sTorrentHash))
                         {
                             string trackersBody = await client.GetStringAsync(sTargetServer + sTorrentsTrackers + sTorrentHash);
-                            string[] sa = trackersBody.Split(saStatusToken, StringSplitOptions.None);
+                            string[] sa = trackersBody.Split(saUrlToken, StringSplitOptions.None);
 
                             // Private Tracker: DHT is disabled & Trackers <= 3
-                            if ((sa[1][0] == '0') && (sa.Length >= 5) && (sa.Length <= 7))
+                            if ((sa[0][sa[0].LastIndexOf(sStatusFieldText) + sStatusFieldText.Length] == '0') && (sa.Length >= 5) && (sa.Length <= 7))
                             {
                                 dPublicTorrents[sTorrentHash] = false;
                             }
@@ -931,9 +933,9 @@ namespace qBittorrentBlockXunlei
                     tsDuration = dtLoopEndTime - dtLoopStartTime;
                     Console.WriteLine(dtLoopEndTime + ", all/pt/bt: " + iTorrentCount + "/" + (iTorrentCount - iPublicTorrentCount) + "/" + iPublicTorrentCount + ", interval: " + dLoopIntervalSeconds + " sec., cost: " + tsDuration.TotalSeconds + " sec.");
 
-                    int iSleepMs = (int)Math.Round(dLoopIntervalMs - tsDuration.TotalMilliseconds);
-                    if (iSleepMs > 0)
-                        Thread.Sleep(iSleepMs);
+                    TimeSpan tsSleep = tsLoopInterval - (DateTime.Now - dtLoopStartTime);
+                    if (tsSleep > TimeSpan.Zero)
+                        Thread.Sleep(tsSleep);
                 }
                 catch (Exception ex)
                 {

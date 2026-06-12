@@ -46,7 +46,7 @@
 
 3. 若要停止執行，可直接關掉視窗，或按熱鍵 ctrl-c
 
-4. 可自行設定掃描的時間間隔，語法：qBittorrentBlockXunlei [埠號] [/i 間隔秒數]
+4. 可自行設定掃描的時間間隔（數字可以含小數，最小值為1，預設值為10），語法：qBittorrentBlockXunlei [埠號] [/i 間隔秒數]
 
 5. 可由本機遙控遠端的 qBittorrent，語法：qBittorrentBlockXunlei [遠端位址:埠號 "帳號" "密碼"] [/i 間隔秒數]
 
