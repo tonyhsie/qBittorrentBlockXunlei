@@ -36,7 +36,7 @@ namespace qBittorrentBlockXunlei
         static NotifyIcon niTrayIcon;
         static bool bConsoleVisible = true;
 
-        static readonly string sVersion = "v260612";
+        static readonly string sVersion = "v260721";
 
         static readonly Encoding eOutput = Console.OutputEncoding;
 
@@ -53,20 +53,24 @@ namespace qBittorrentBlockXunlei
         static readonly string sApp_webapiVersion = "/api/v2/app/webapiVersion";
         static readonly string sApp_setPreferences = "/api/v2/app/setPreferences";
         static readonly string sSync_maindata = "/api/v2/sync/maindata";
-        static readonly string sSync_torrentPeers = "/api/v2/sync/torrentPeers?hash=";
-        static readonly string sTransfer_banpeers = "/api/v2/transfer/banPeers";
         static readonly string sTorrentsTrackers = "/api/v2/torrents/trackers?hash=";
         static readonly string sTorrentsProperties = "/api/v2/torrents/properties?hash=";
+        static readonly string sSync_torrentPeers = "/api/v2/sync/torrentPeers?hash=";
+        static readonly string sTransfer_banpeers = "/api/v2/transfer/banPeers";
 
         // responseBody, /api/v2/sync/maindata
         static readonly string sFullUpdateText = "\"full_update\":";
         static readonly string sTorrentsObjectText = "\"torrents\":{";
         static readonly string sNameFieldText = "\"name\":\"";
-        static readonly string sTotalSizeFieldText = "\"total_size\":";
         static readonly string sUpspeedFieldText = "\"upspeed\":";
+
+        // trackersBody, /api/v2/torrents/trackers?hash=
+        static readonly string sStatusFieldText = "\"status\":";
+        static readonly string sUrlFieldText = "\"url\":";
 
         // propertiesBody, /api/v2/torrents/properties?hash=
         static readonly string sPieceSizeFieldText = "\"piece_size\":";
+        static readonly string sTotalSizeFieldText = "\"total_size\":";
 
         // peersBody, /api/v2/sync/torrentPeers?hash=
         static readonly string sTorrentPeersStartText = "{\"full_update\":";
@@ -543,8 +547,6 @@ namespace qBittorrentBlockXunlei
             await client.PostAsync(sTargetServer + sApp_setPreferences, new FormUrlEncodedContent(new Dictionary<string, string>() { { "json", "{\"banned_IPs\":\"\"}" } }));
 
             string sDecimalFormat = "#0.###";
-            string[] saUrlToken = new string[] { ",\"url\":" };
-            string sStatusFieldText = ",\"status\":";
 
             Dictionary<string, bool> dPublicTorrents = new Dictionary<string, bool>();
             Dictionary<string, long> dTorrentSizes = new Dictionary<string, long>();
@@ -617,28 +619,42 @@ namespace qBittorrentBlockXunlei
                         if (!dPublicTorrents.ContainsKey(sTorrentHash))
                         {
                             string trackersBody = await client.GetStringAsync(sTargetServer + sTorrentsTrackers + sTorrentHash);
-                            string[] sa = trackersBody.Split(saUrlToken, StringSplitOptions.None);
 
-                            // Private Tracker: DHT is disabled & Trackers <= 3
-                            if ((sa[0][sa[0].LastIndexOf(sStatusFieldText) + sStatusFieldText.Length] == '0') && (sa.Length >= 5) && (sa.Length <= 7))
+                            // BT (非 PT): 啟用 DHT 或 Tracker 數 > 3
+                            int iTrackersIndex = trackersBody.IndexOf("[DHT]");
+                            bool bDhtEnabled = trackersBody[trackersBody.LastIndexOf(sStatusFieldText, iTrackersIndex) + sStatusFieldText.Length] != '0';
+                            if (bDhtEnabled)
                             {
-                                dPublicTorrents[sTorrentHash] = false;
+                                dPublicTorrents[sTorrentHash] = true;
                             }
                             else
                             {
-                                dPublicTorrents[sTorrentHash] = true;
+                                // 排除 [DHT]、[PeX]、[LSD]
+                                int iTrackersCount = -3;
+                                iTrackersIndex = trackersBody.IndexOf(sUrlFieldText);
+                                while (iTrackersIndex != -1)
+                                {
+                                    ++iTrackersCount;
+                                    iTrackersIndex = trackersBody.IndexOf(sUrlFieldText, iTrackersIndex + sUrlFieldText.Length);
+                                }
+                                dPublicTorrents[sTorrentHash] = iTrackersCount > 3;
+                            }
 
-                                iResponseStartIndex = responseBody.IndexOf(sTotalSizeFieldText, iResponseEndIndex) + sTotalSizeFieldText.Length;
-                                iResponseEndIndex = responseBody.IndexOf(',', iResponseStartIndex);
-                                dTorrentSizes[sTorrentHash] = long.Parse(responseBody.Substring(iResponseStartIndex, iResponseEndIndex - iResponseStartIndex));
-
+                            if (dPublicTorrents[sTorrentHash])
+                            {
                                 string propertiesBody = await client.GetStringAsync(sTargetServer + sTorrentsProperties + sTorrentHash);
-                                int iStartIndex = propertiesBody.IndexOf(sPieceSizeFieldText) + sPieceSizeFieldText.Length;
-                                dTorrentPieceSizes[sTorrentHash] = long.Parse(propertiesBody.Substring(iStartIndex, propertiesBody.IndexOf(',', iStartIndex) - iStartIndex));
+
+                                int iPropertiesStartIndex = propertiesBody.IndexOf(sPieceSizeFieldText) + sPieceSizeFieldText.Length;
+                                int iPropertiesEndIndex = propertiesBody.IndexOf(',', iPropertiesStartIndex);
+                                dTorrentPieceSizes[sTorrentHash] = long.Parse(propertiesBody.Substring(iPropertiesStartIndex, iPropertiesEndIndex - iPropertiesStartIndex));
+
+                                iPropertiesStartIndex = propertiesBody.IndexOf(sTotalSizeFieldText, iPropertiesEndIndex) + sTotalSizeFieldText.Length;
+                                iPropertiesEndIndex = propertiesBody.IndexOf(',', iPropertiesStartIndex);
+                                dTorrentSizes[sTorrentHash] = long.Parse(propertiesBody.Substring(iPropertiesStartIndex, iPropertiesEndIndex - iPropertiesStartIndex));
                             }
                         }
 
-                        // 取得 peers (僅限於非 PT 的種子)
+                        // 取得 peers (僅限於 BT 種子)
                         if (dPublicTorrents[sTorrentHash])
                         {
                             ++iPublicTorrentCount;
