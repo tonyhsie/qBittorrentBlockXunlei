@@ -36,7 +36,7 @@ namespace qBittorrentBlockXunlei
         static NotifyIcon niTrayIcon;
         static bool bConsoleVisible = true;
 
-        static readonly string sVersion = "v260721";
+        static readonly string sVersion = "v261005";
 
         static readonly Encoding eOutput = Console.OutputEncoding;
 
@@ -662,7 +662,7 @@ namespace qBittorrentBlockXunlei
                             hsActiveTorrents.Add(sTorrentHash);
                             if (!dTorrentPeerProgresses.ContainsKey(sTorrentHash))
                                 dTorrentPeerProgresses[sTorrentHash] = new Dictionary<string, decimal>();
-                            Dictionary<string, decimal> dPeerProgresses = dTorrentPeerProgresses[sTorrentHash];
+                            Dictionary<string, decimal> dPeerInitialProgresses = dTorrentPeerProgresses[sTorrentHash];
 
                             Dictionary<string, HashSet<string>> dPeerNetworks = new Dictionary<string, HashSet<string>>();
                             Dictionary<string, string> dPeerToClients = new Dictionary<string, string>();
@@ -672,10 +672,7 @@ namespace qBittorrentBlockXunlei
                             int iPeersStartIndex = peersBody.IndexOf(sPeersObjectText);
                             int iPeersEndIndex;
                             if ((iPeersStartIndex == -1) || !peersBody.StartsWith(sTorrentPeersStartText))
-                            {
-                                Console.WriteLine("Can't get peers list!");
-                                break;
-                            }
+                                throw new Exception("Can't get peers list!");
 
                             iPeersStartIndex += sPeersObjectText.Length;
                             while (iPeersStartIndex != -1)
@@ -826,23 +823,23 @@ namespace qBittorrentBlockXunlei
                                         bBanPeer = true;
                                     }
                                     // 記錄各 peer 最初的進度
-                                    else if (!dPeerProgresses.ContainsKey(sPeer))
+                                    else if (!dPeerInitialProgresses.ContainsKey(sPeer))
                                     {
                                         decimal dmInitialProgress = dmProgress - (decimal)lUploaded / dTorrentSizes[sTorrentHash];
                                         if (dmInitialProgress < 0)
                                             dmInitialProgress = 0;
-                                        dPeerProgresses[sPeer] = dmInitialProgress;
+                                        dPeerInitialProgresses[sPeer] = dmInitialProgress;
                                     }
                                     // 現在進度 < 最初進度
-                                    else if (dmProgress < dPeerProgresses[sPeer])
+                                    else if (dmProgress < dPeerInitialProgresses[sPeer])
                                     {
-                                        Console.WriteLine("Banned - Progress = " + (dmProgress * 100).ToString(sDecimalFormat) + "% < initial = " + (dPeerProgresses[sPeer] * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
+                                        Console.WriteLine("Banned - Progress = " + (dmProgress * 100).ToString(sDecimalFormat) + "% < initial = " + (dPeerInitialProgresses[sPeer] * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
                                         bBanPeer = true;
                                     }
                                     // 預估進度 > 對方回報的進度，預估進度 = (上傳量 - 容許誤差) / 種子實際大小
-                                    else if ((dTorrentSizes[sTorrentHash] > lProgressCheckBoundarySize) && ((lUploaded - lProgressCheckBoundarySize) > (dTorrentSizes[sTorrentHash] * (dmProgress - dPeerProgresses[sPeer]))))
+                                    else if ((dTorrentSizes[sTorrentHash] > lProgressCheckBoundarySize) && ((lUploaded - lProgressCheckBoundarySize) > (dTorrentSizes[sTorrentHash] * (dmProgress - dPeerInitialProgresses[sPeer]))))
                                     {
-                                        Console.WriteLine("Banned - Uploaded = " + ((decimal)lUploaded * 100 / dTorrentSizes[sTorrentHash]).ToString(sDecimalFormat) + "% > Progress = " + ((dmProgress - dPeerProgresses[sPeer]) * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
+                                        Console.WriteLine("Banned - Uploaded = " + ((decimal)lUploaded * 100 / dTorrentSizes[sTorrentHash]).ToString(sDecimalFormat) + "% > Progress = " + ((dmProgress - dPeerInitialProgresses[sPeer]) * 100).ToString(sDecimalFormat) + "%: " + sClient + ", " + sPeer);
                                         bBanPeer = true;
                                     }
                                 }
@@ -914,19 +911,7 @@ namespace qBittorrentBlockXunlei
                     {
                         sbBanPeers.Remove(sbBanPeers.Length - 1, 1);
 
-                        try
-                        {
-                            await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
-                        }
-                        catch (Exception ex)
-                        {
-                            do
-                            {
-                                Console.WriteLine(ex.Message + "\t" + DateTime.Now);
-                                ex = ex.InnerException;
-                            } while (ex != null);
-                            Thread.Sleep(iPauseBeforeExitMs);
-                        }
+                        await client.PostAsync(sTargetServer + sTransfer_banpeers, new FormUrlEncodedContent(new Dictionary<string, string>() { { "peers", sbBanPeers.ToString() } }));
 
                         sbBanPeers.Clear();
                     }

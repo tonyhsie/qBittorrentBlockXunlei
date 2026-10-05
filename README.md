@@ -42,9 +42,9 @@
 ![image](https://github.com/tonyhsie/qBittorrentBlockXunlei/assets/52758827/abf6fed3-01a1-4b74-8484-09d11d360145)
 
 
-2. 執行 qBittorrentBlockXunlei.exe 或 qbx.cmd (系統列模式) 即可
+2. 執行 qBittorrentBlockXunlei.exe 即可
 
-3. 若要停止執行，可直接關掉視窗，或按熱鍵 ctrl-c
+3. 若要停止執行，可直接按熱鍵 ctrl-c，或在系統列圖示上開啟右鍵選單選擇 Exit
 
 4. 可自行設定掃描的時間間隔（數字可以含小數，最小值為1，預設值為10），語法：qBittorrentBlockXunlei [埠號] [/i 間隔秒數]
 
@@ -52,9 +52,9 @@
 
 6. 可使用 /insecure 參數，來強制連接證書不安全的 https
 
-7. 程式會自動縮小到系統列 (單擊系統列的圖示，可開啟/關閉 Console 視窗；右鍵點擊圖示，則可選擇開啟/關閉，或離開程式)
+7. 可使用 /notray 參數，讓程式不使用系統列模式
 
-8. 可使用 /notray 參數，讓程式不使用系統列模式
+8. 程式會自動縮小到系統列 (單擊系統列的圖示，可開啟/關閉 Console 視窗；右鍵點擊圖示，則可選擇開啟/關閉，或離開程式)
 
 9. 如何確認此程式真的有作用？
 
