@@ -36,7 +36,7 @@ namespace qBittorrentBlockXunlei
         static NotifyIcon niTrayIcon;
         static bool bConsoleVisible = true;
 
-        static readonly string sVersion = "v261005";
+        static readonly string sVersion = "v261029";
 
         static readonly Encoding eOutput = Console.OutputEncoding;
 
@@ -413,7 +413,8 @@ namespace qBittorrentBlockXunlei
 
             if (sTargetPort == "")
             {
-                string sWebUIPort = @"WebUI\Port=";
+                string sWebUI = @"WebUI";
+                string sPort = "Port=";
                 string sAppDataDir = Environment.GetEnvironmentVariable("APPDATA");
                 if (sAppDataDir != null)
                 {
@@ -421,14 +422,20 @@ namespace qBittorrentBlockXunlei
                     if (File.Exists(sQbittorrentIniFile))
                     {
                         string sQbittorrentIniContent = File.ReadAllText(sQbittorrentIniFile, Encoding.UTF8);
-                        int iStartIndex = sQbittorrentIniContent.IndexOf(sWebUIPort);
+                        int iStartIndex = sQbittorrentIniContent.IndexOf(sWebUI);
                         if (iStartIndex >= 0)
                         {
-                            sTargetPort = sQbittorrentIniContent.Substring(iStartIndex + sWebUIPort.Length, sQbittorrentIniContent.IndexOf('\n', iStartIndex) - iStartIndex - sWebUIPort.Length).Trim();
-                            if (int.TryParse(sTargetPort, out int i) && (i > 0) && (i <= 65535))
-                                sTargetServer += sTargetPort;
-                            else
-                                sTargetPort = "";
+                            iStartIndex += sWebUI.Length;
+                            iStartIndex = sQbittorrentIniContent.IndexOf(sPort, iStartIndex);
+                            if (iStartIndex >= 0)
+                            {
+                                iStartIndex += sPort.Length;
+                                sTargetPort = sQbittorrentIniContent.Substring(iStartIndex, sQbittorrentIniContent.IndexOf('\n', iStartIndex) - iStartIndex).Trim();
+                                if (int.TryParse(sTargetPort, out int i) && (i > 0) && (i <= 65535))
+                                    sTargetServer += sTargetPort;
+                                else
+                                    sTargetPort = "";
+                            }
                         }
                     }
                 }
